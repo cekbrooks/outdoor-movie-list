@@ -33,18 +33,18 @@ export function filterByPeriod(
   period: TimePeriodSlug,
   now: Date
 ): Screening[] {
-  const upcoming = screenings.filter((s) => isUpcoming(s, now));
+  const upcoming = screenings.filter((s) => isUpcoming(s.date));
   switch (period) {
     case "today":
-      return upcoming.filter((s) => isScreeningToday(s, now));
+      return upcoming.filter((s) => isScreeningToday(s.date));
     case "tonight":
-      return upcoming.filter((s) => isScreeningTonight(s, now));
+      return upcoming.filter((s) => isScreeningTonight(s.date));
     case "this-week":
       return upcoming.filter((s) => isWithinNextDays(s, now, 7));
     case "this-weekend":
-      return upcoming.filter((s) => isThisWeekend(s, now));
+      return upcoming.filter((s) => isThisWeekend(s.date));
     case "this-month":
-      return upcoming.filter((s) => isThisCalendarMonth(s, now));
+      return upcoming.filter((s) => isThisCalendarMonth(s.date));
     case "free":
       return upcoming.filter((s) => s.isFree);
     default:
