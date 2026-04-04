@@ -33,7 +33,7 @@ export function ScreeningCard({
           className="relative aspect-[2/3] w-full shrink-0 sm:w-36 md:w-44"
         >
           <Image
-            src={s.imageUrl}
+            src={s.imageUrl || "/placeholder-poster.svg"}
             alt={`${s.film} poster`}
             fill
             className="object-cover transition duration-500 group-hover:scale-[1.03]"
