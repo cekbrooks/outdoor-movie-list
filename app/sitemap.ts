@@ -1,43 +1,102 @@
 import type { MetadataRoute } from "next";
-import { CITIES } from "@/lib/data";
-import {
-  allFilmSlugs,
-  allVenueSlugs,
-} from "@/lib/queries";
-import { SITE_URL } from "@/lib/seo";
-import { TIME_PERIODS } from "@/lib/time-period";
+
+/** Used when `NEXT_PUBLIC_SITE_URL` is unset or invalid (no `new URL()`). */
+const FALLBACK_ORIGIN = "https://outdoormovielist.com";
+
+const CITY_SLUGS = ["new-york", "london"] as const;
+
+const PERIODS = [
+  "today",
+  "tonight",
+  "this-week",
+  "this-weekend",
+  "this-month",
+  "free",
+] as const;
+
+function getSiteOrigin(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim() ?? "";
+
+  if (raw && /:\/\//.test(raw) && !/^https?:\/\//i.test(raw)) {
+    return FALLBACK_ORIGIN;
+  }
+
+  let origin: string;
+  if (!raw) {
+    origin = FALLBACK_ORIGIN;
+  } else if (/^https?:\/\//i.test(raw)) {
+    origin = raw.replace(/\/+$/, "");
+  } else {
+    origin = `https://${raw.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+  }
+
+  const rest = origin.replace(/^https?:\/\//i, "");
+  if (!rest || /^[/\s]/.test(rest)) {
+    return FALLBACK_ORIGIN;
+  }
+
+  return origin;
+}
+
+/** Build absolute URLs with string concat only. Home = origin with no trailing slash. */
+function absoluteUrl(path: string): string {
+  const origin = getSiteOrigin();
+  if (path === "/" || path === "") {
+    return origin;
+  }
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${origin}${p}`;
+}
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastMod = new Date();
-  const base: MetadataRoute.Sitemap = [
-    { url: SITE_URL, lastModified: lastMod, changeFrequency: "daily" },
-    { url: `${SITE_URL}/near-me`, lastModified: lastMod },
-    { url: `${SITE_URL}/suggest-a-city`, lastModified: lastMod },
-    { url: `${SITE_URL}/cities`, lastModified: lastMod },
-  ];
+  const lastModified = new Date();
+  const entries: MetadataRoute.Sitemap = [];
 
-  for (const c of CITIES) {
-    base.push({
-      url: `${SITE_URL}/${c.slug}`,
-      lastModified: lastMod,
+  entries.push({
+    url: absoluteUrl("/"),
+    lastModified,
+    changeFrequency: "daily",
+    priority: 1,
+  });
+
+  for (const city of CITY_SLUGS) {
+    entries.push({
+      url: absoluteUrl(`/${city}`),
+      lastModified,
       changeFrequency: "daily",
+      priority: 0.9,
     });
-    for (const p of TIME_PERIODS) {
-      base.push({
-        url: `${SITE_URL}/${c.slug}/${p}`,
-        lastModified: lastMod,
+
+    for (const period of PERIODS) {
+      entries.push({
+        url: absoluteUrl(`/${city}/${period}`),
+        lastModified,
         changeFrequency: "daily",
+        priority: 0.85,
       });
     }
   }
 
-  for (const slug of allVenueSlugs()) {
-    base.push({ url: `${SITE_URL}/venues/${slug}`, lastModified: lastMod });
-  }
+  entries.push(
+    {
+      url: absoluteUrl("/near-me"),
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.75,
+    },
+    {
+      url: absoluteUrl("/suggest-a-city"),
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.65,
+    },
+    {
+      url: absoluteUrl("/cities"),
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    }
+  );
 
-  for (const slug of allFilmSlugs()) {
-    base.push({ url: `${SITE_URL}/movies/${slug}`, lastModified: lastMod });
-  }
-
-  return base;
+  return entries;
 }
