@@ -23,7 +23,7 @@ export function CitiesGrid({ cities, screenings }: Props) {
     return cities.map((c) => ({
       ...c,
       count: screenings.filter(
-        (s) => s.city === c.slug && isUpcoming(s, now)
+        (s) => s.city === c.slug && isUpcoming(s.date)
       ).length,
     }));
   }, [cities, screenings, now]);

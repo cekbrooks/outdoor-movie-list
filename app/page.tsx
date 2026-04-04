@@ -31,9 +31,8 @@ export default async function HomePage() {
     fetchScreenings(),
   ]);
 
-  const now = new Date();
   const upcoming = allScreenings
-    .filter((s) => isUpcoming(s, now))
+    .filter((s) => isUpcoming(s.date))
     .sort(sortScreeningsByDate);
 
   return (
@@ -88,7 +87,7 @@ export default async function HomePage() {
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             {cities.map((c) => {
               const count = allScreenings.filter(
-                (s) => s.city === c.slug && isUpcoming(s, now)
+                (s) => s.city === c.slug && isUpcoming(s.date)
               ).length;
               return (
                 <Link
