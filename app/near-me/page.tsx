@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NearMeClient } from "@/components/NearMeClient";
-import { SCREENINGS } from "@/lib/data";
+import { fetchScreenings } from "@/lib/data";
 import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -16,7 +16,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function NearMePage() {
+export default async function NearMePage() {
+  const allScreenings = await fetchScreenings();
+
   return (
     <main className="flex-1">
       <section className="border-b border-white/10">
@@ -38,7 +40,7 @@ export default function NearMePage() {
             </div>
           }
         >
-          <NearMeClient allScreenings={SCREENINGS} />
+          <NearMeClient allScreenings={allScreenings} />
         </Suspense>
       </section>
     </main>

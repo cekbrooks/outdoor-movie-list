@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { ScreeningCard } from "@/components/ScreeningCard";
 import { ScreeningsMapLoader } from "@/components/ScreeningsMapLoader";
+import { fetchScreenings } from "@/lib/data";
 import { getScreeningsByVenueSlug, sortScreeningsByDate } from "@/lib/queries";
 import { eventsJsonLdArray } from "@/lib/jsonld";
 import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
@@ -13,7 +14,8 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const rows = getScreeningsByVenueSlug(slug);
+  const screenings = await fetchScreenings();
+  const rows = getScreeningsByVenueSlug(screenings, slug);
   const first = rows[0];
   if (!first) return { title: "Venue not found" };
   const title = `${first.venue} — Outdoor movies — ${SITE_NAME}`;
@@ -39,7 +41,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function VenuePage({ params }: Props) {
   const { slug } = await params;
-  const rows = getScreeningsByVenueSlug(slug).sort(sortScreeningsByDate);
+  const screenings = await fetchScreenings();
+  const rows = getScreeningsByVenueSlug(screenings, slug).sort(
+    sortScreeningsByDate
+  );
   if (rows.length === 0) notFound();
 
   const v = rows[0];

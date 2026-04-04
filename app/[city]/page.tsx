@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { CityBrowse } from "@/components/CityBrowse";
 import { EmailCapture } from "@/components/EmailCapture";
 import { JsonLd } from "@/components/JsonLd";
-import { getCityBySlug, getScreeningsByCity } from "@/lib/data";
+import { fetchCityBySlug, fetchScreeningsByCity } from "@/lib/data";
 import { isUpcoming } from "@/lib/dates";
 import { eventsJsonLdArray } from "@/lib/jsonld";
 import { sortScreeningsByDate } from "@/lib/queries";
@@ -17,7 +17,7 @@ type Props = { params: Promise<{ city: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { city: slug } = await params;
-  const city = getCityBySlug(slug);
+  const city = await fetchCityBySlug(slug);
   if (!city) return { title: "Not found" };
   const title = `Outdoor Movies in ${city.name} 2026 — ${SITE_NAME}`;
   const description = `Outdoor cinema in ${city.name}: parks, rooftops, waterfronts, and gardens. Updated listings with booking links.`;
@@ -37,11 +37,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CityPage({ params }: Props) {
   const { city: slug } = await params;
-  const city = getCityBySlug(slug);
+  const city = await fetchCityBySlug(slug);
   if (!city) notFound();
 
   const now = new Date();
-  const screenings = getScreeningsByCity(slug)
+  const byCity = await fetchScreeningsByCity(slug);
+  const screenings = byCity
     .filter((s) => isUpcoming(s, now))
     .sort(sortScreeningsByDate);
 
@@ -49,7 +50,7 @@ export default async function CityPage({ params }: Props) {
 
   return (
     <main className="flex-1">
-      <JsonLd data={jsonLd} />
+      {screenings.length > 0 ? <JsonLd data={jsonLd} /> : null}
       <section className="relative overflow-hidden border-b border-white/10">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_80%_0%,rgba(245,166,35,0.12),transparent)]"

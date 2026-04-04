@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { haversineKm, milesFromKm } from "@/lib/geo";
 import type { Screening } from "@/lib/types";
+import { NoScreenings } from "./NoScreenings";
 import { ScreeningCard } from "./ScreeningCard";
 
 const RADIUS_KM = 40;
@@ -63,6 +64,10 @@ export function NearMeClient({ allScreenings }: Props) {
       .sort((a, b) => a.km - b.km);
   }, [allScreenings, lat, lng]);
 
+  if (allScreenings.length === 0) {
+    return <NoScreenings />;
+  }
+
   if (!ready) {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#0d1428]/50 p-12 text-center text-white/60">
@@ -107,16 +112,7 @@ export function NearMeClient({ allScreenings }: Props) {
         distance.
       </p>
       {withDistance.length === 0 ? (
-        <p className="text-[#f0ede8]/80">
-          Nothing in range yet. Try{" "}
-          <Link
-            href="/cities"
-            className="text-[#f5a623] underline-offset-4 hover:underline"
-          >
-            another city
-          </Link>
-          .
-        </p>
+        <NoScreenings message="No screenings found within range. Try another city." />
       ) : (
         <ul className="grid list-none gap-6 p-0">
           {withDistance.map(({ s, mi }) => (

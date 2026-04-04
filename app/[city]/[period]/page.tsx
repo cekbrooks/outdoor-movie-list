@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
+import { NoScreenings } from "@/components/NoScreenings";
 import { ScreeningCard } from "@/components/ScreeningCard";
-import { getCityBySlug, getScreeningsByCity } from "@/lib/data";
+import { fetchCityBySlug, fetchScreeningsByCity } from "@/lib/data";
 import { eventsJsonLdArray } from "@/lib/jsonld";
 import { sortScreeningsByDate } from "@/lib/queries";
 import { defaultOgImage, SITE_URL } from "@/lib/seo";
@@ -26,10 +27,11 @@ function isPeriod(s: string): s is TimePeriodSlug {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { city: slug, period: periodRaw } = await params;
-  const city = getCityBySlug(slug);
+  const city = await fetchCityBySlug(slug);
   if (!city || !isPeriod(periodRaw)) return { title: "Not found" };
   const now = new Date();
-  const list = filterByPeriod(getScreeningsByCity(slug), periodRaw, now).sort(
+  const cityScreenings = await fetchScreeningsByCity(slug);
+  const list = filterByPeriod(cityScreenings, periodRaw, now).sort(
     sortScreeningsByDate
   );
   const title = periodTitle(periodRaw, city.name, now);
@@ -55,21 +57,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PeriodPage({ params }: Props) {
   const { city: slug, period: periodRaw } = await params;
-  const city = getCityBySlug(slug);
+  const city = await fetchCityBySlug(slug);
   if (!city || !isPeriod(periodRaw)) notFound();
 
   const now = new Date();
-  const screenings = filterByPeriod(
-    getScreeningsByCity(slug),
-    periodRaw,
-    now
-  ).sort(sortScreeningsByDate);
+  const cityScreenings = await fetchScreeningsByCity(slug);
+  const screenings = filterByPeriod(cityScreenings, periodRaw, now).sort(
+    sortScreeningsByDate
+  );
 
   const jsonLd = eventsJsonLdArray(screenings);
 
   return (
     <main className="flex-1">
-      <JsonLd data={jsonLd} />
+      {screenings.length > 0 ? <JsonLd data={jsonLd} /> : null}
       <section className="border-b border-white/10 bg-[#070b14]/50">
         <div className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-16">
           <Link
@@ -90,22 +91,29 @@ export default async function PeriodPage({ params }: Props) {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-16">
-        <ul className="grid list-none gap-6 p-0">
-          {screenings.map((s) => (
-            <li key={s.id}>
-              <ScreeningCard screening={s} />
-            </li>
-          ))}
-        </ul>
         {screenings.length === 0 ? (
-          <p className="text-white/50">
-            Nothing here yet. See all{" "}
-            <Link href={`/${slug}`} className="text-[#f5a623] hover:underline">
-              {city.name} screenings
-            </Link>
-            .
-          </p>
-        ) : null}
+          <div className="space-y-4">
+            <NoScreenings />
+            <p className="text-center text-sm text-white/50">
+              See all{" "}
+              <Link
+                href={`/${slug}`}
+                className="text-[#f5a623] hover:underline"
+              >
+                {city.name} screenings
+              </Link>
+              .
+            </p>
+          </div>
+        ) : (
+          <ul className="grid list-none gap-6 p-0">
+            {screenings.map((s) => (
+              <li key={s.id}>
+                <ScreeningCard screening={s} />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </main>
   );

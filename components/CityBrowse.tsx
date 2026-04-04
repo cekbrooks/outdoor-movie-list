@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Screening } from "@/lib/types";
 import { OUTDOOR_TYPES } from "@/lib/constants";
+import { NoScreenings } from "./NoScreenings";
 import { ScreeningCard } from "./ScreeningCard";
 import { ScreeningsMap } from "./ScreeningsMap";
 
@@ -44,6 +45,10 @@ export function CityBrowse({ cityName, screenings }: Props) {
       return true;
     });
   }, [screenings, dateFrom, dateTo, price, outdoor, dogOnly]);
+
+  if (screenings.length === 0) {
+    return <NoScreenings />;
+  }
 
   return (
     <div className="space-y-8">
@@ -148,7 +153,13 @@ export function CityBrowse({ cityName, screenings }: Props) {
       </p>
 
       {view === "map" ? (
-        <ScreeningsMap screenings={filtered} className="min-h-[480px]" />
+        filtered.length === 0 ? (
+          <NoScreenings message="No screenings match your filters." />
+        ) : (
+          <ScreeningsMap screenings={filtered} className="min-h-[480px]" />
+        )
+      ) : filtered.length === 0 ? (
+        <NoScreenings message="No screenings match your filters." />
       ) : (
         <ul className="grid list-none gap-6 p-0 md:grid-cols-1">
           {filtered.map((s) => (

@@ -1,873 +1,160 @@
-import type { City, Screening } from "./types";
+import { cache } from "react";
+import { tryCreateSupabaseClient } from "@/lib/supabase";
+import type { City, Screening } from "@/lib/types";
 
-export const CITIES: City[] = [
-  {
-    slug: "new-york",
-    name: "New York",
-    country: "United States",
-    lat: 40.7128,
-    lng: -74.006,
-    addedBy: "Outdoor Movie List",
-    addedDate: "2026-01-15",
-  },
-  {
-    slug: "london",
-    name: "London",
-    country: "United Kingdom",
-    lat: 51.5074,
-    lng: -0.1278,
-    addedBy: "Outdoor Movie List",
-    addedDate: "2026-01-15",
-  },
-];
+type CityRow = {
+  slug: string;
+  name: string;
+  country: string;
+  lat: number;
+  lng: number;
+  added_by: string | null;
+  added_date: string | null;
+};
 
-export const SCREENINGS: Screening[] = [
-  {
-    id: "nyc-001",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Bryant Park",
-    hostOrg: "HBO Bryant Park Summer Film Festival",
-    address: "6th Ave & W 42nd St, New York, NY 10018",
-    neighbourhood: "Midtown",
-    lat: 40.7536,
-    lng: -73.9832,
-    film: "The Princess Bride",
-    filmYear: 1987,
-    description:
-      "Classic fairy-tale adventure on the lawn behind the New York Public Library. Arrive early for a spot on the grass.",
-    date: "2026-04-03",
-    time: "8:00 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Park",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://bryantpark.org/programs/film-festival",
-    listingUrl: "https://bryantpark.org",
-    imageUrl:
-      "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-002",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Brooklyn Bridge Park",
-    hostOrg: "Brooklyn Bridge Park Conservancy",
-    address: "Pier 1 Harbor View Lawn, Brooklyn, NY 11201",
-    neighbourhood: "Brooklyn Heights",
-    lat: 40.7024,
-    lng: -73.9968,
-    film: "Do the Right Thing",
-    filmYear: 1989,
-    description:
-      "Spike Lee’s landmark Brooklyn story with Manhattan skyline views. Blankets encouraged.",
-    date: "2026-04-04",
-    time: "7:30 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Waterfront",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://www.brooklynbridgepark.org",
-    listingUrl: "https://www.brooklynbridgepark.org",
-    imageUrl:
-      "https://images.unsplash.com/photo-1598899134739-24c46f58b8c9?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-003",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Pier 17 Rooftop",
-    hostOrg: "The Seaport",
-    address: "89 South St, New York, NY 10038",
-    neighbourhood: "Seaport",
-    lat: 40.7069,
-    lng: -74.0034,
-    film: "La La Land",
-    filmYear: 2016,
-    description:
-      "Rooftop screening overlooking the East River. Limited seating; arrive early.",
-    date: "2026-04-05",
-    time: "8:15 pm",
-    price: "$25",
-    isFree: false,
-    outdoorType: "Rooftop",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: false,
-    bookingUrl: "https://www.theseaport.nyc",
-    listingUrl: "https://www.theseaport.nyc",
-    imageUrl:
-      "https://images.unsplash.com/photo-1478720568477-83d55bb59607?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-004",
-    city: "new-york",
-    cityName: "New York",
-    venue: "McCarren Park",
-    hostOrg: "SummerScreen",
-    address: "776 Lorimer St, Brooklyn, NY 11222",
-    neighbourhood: "Williamsburg",
-    lat: 40.7214,
-    lng: -73.9513,
-    film: "Clueless",
-    filmYear: 1995,
-    description:
-      "Feel-good ’90s comedy under the trees. Food vendors nearby.",
-    date: "2026-04-03",
-    time: "8:30 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Park",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://www.mccarrenpark.com",
-    listingUrl: "https://www.nycgovparks.org/parks/mccarren-park",
-    imageUrl:
-      "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-005",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Queens Botanical Garden",
-    hostOrg: "QBG Cinema in the Garden",
-    address: "43-50 Main St, Flushing, NY 11355",
-    neighbourhood: "Flushing",
-    lat: 40.7511,
-    lng: -73.826,
-    film: "Crouching Tiger, Hidden Dragon",
-    filmYear: 2000,
-    description:
-      "Wuxia epic in a blooming garden setting. Chairs provided in VIP section.",
-    date: "2026-04-12",
-    time: "7:45 pm",
-    price: "$18",
-    isFree: false,
-    outdoorType: "Historic Garden",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: false,
-    bookingUrl: "https://queensbotanical.org",
-    listingUrl: "https://queensbotanical.org",
-    imageUrl:
-      "https://images.unsplash.com/photo-1440404653325-ab12749a9e74?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-006",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Snug Harbor Cultural Center",
-    hostOrg: "Staten Island Arts",
-    address: "1000 Richmond Terrace, Staten Island, NY 10301",
-    neighbourhood: "Staten Island",
-    lat: 40.642,
-    lng: -74.1042,
-    film: "Moonrise Kingdom",
-    filmYear: 2012,
-    description:
-      "Wes Anderson whimsy in a historic campus courtyard. Ferry ride is part of the charm.",
-    date: "2026-05-02",
-    time: "8:00 pm",
-    price: "Pay what you wish",
-    isFree: false,
-    outdoorType: "Courtyard",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://snug-harbor.org",
-    listingUrl: "https://snug-harbor.org",
-    imageUrl:
-      "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=600&h=900&fit=crop",
-    status: "tbc",
-  },
-  {
-    id: "nyc-007",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Brookfield Place Waterfront Plaza",
-    hostOrg: "Arts Brookfield",
-    address: "230 Vesey St, New York, NY 10281",
-    neighbourhood: "Battery Park City",
-    lat: 40.713,
-    lng: -74.0157,
-    film: "Ocean’s Eleven",
-    filmYear: 2001,
-    description:
-      "Heist caper with Hudson River breezes. Lounge chairs on the plaza.",
-    date: "2026-05-17",
-    time: "8:30 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Waterfront",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://www.brookfieldplaceny.com",
-    listingUrl: "https://www.brookfieldplaceny.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1596727147705-61a532a659bd?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-008",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Industry City Courtyard",
-    hostOrg: "Industry City",
-    address: "220 36th St, Brooklyn, NY 11232",
-    neighbourhood: "Sunset Park",
-    lat: 40.6568,
-    lng: -74.0089,
-    film: "Scott Pilgrim vs. the World",
-    filmYear: 2010,
-    description:
-      "Courtyard screening with craft food hall access before the show.",
-    date: "2026-06-07",
-    time: "8:00 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Courtyard",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://industrycity.com",
-    listingUrl: "https://industrycity.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1574267432553-4b4628081c31?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-009",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Skyline Drive-In NYC",
-    hostOrg: "Skyline Drive-In",
-    address: "1 Oak St, Brooklyn, NY 11222",
-    neighbourhood: "Greenpoint",
-    lat: 40.7294,
-    lng: -73.9614,
-    film: "Grease",
-    filmYear: 1978,
-    description:
-      "Waterfront drive-in with FM audio. Tune your radio and enjoy the skyline.",
-    date: "2026-06-21",
-    time: "Sunset (~8:30 pm)",
-    price: "$55 per car",
-    isFree: false,
-    outdoorType: "Drive-In",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://skyline-drivein.com",
-    listingUrl: "https://skyline-drivein.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-010",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Central Park — Naumburg Bandshell",
-    hostOrg: "Central Park Conservancy Film Festival",
-    address: "Mid-Park at 72nd St, New York, NY 10021",
-    neighbourhood: "Upper West Side",
-    lat: 40.7711,
-    lng: -73.9748,
-    film: "When Harry Met Sally",
-    filmYear: 1989,
-    description:
-      "Rom-com classic steps from the Mall. One of NYC’s most iconic outdoor film spots.",
-    date: "2026-07-09",
-    time: "8:00 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Park",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://www.centralparknyc.org",
-    listingUrl: "https://www.centralparknyc.org",
-    imageUrl:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-011",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Hudson Yards Public Square",
-    hostOrg: "Related Companies",
-    address: "20 Hudson Yards, New York, NY 10001",
-    neighbourhood: "Hudson Yards",
-    lat: 40.7536,
-    lng: -74.0027,
-    film: "Black Panther",
-    filmYear: 2018,
-    description:
-      "Marvel blockbuster on the plaza with Vessel views. Family-friendly.",
-    date: "2026-07-18",
-    time: "8:15 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Courtyard",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://www.hudsonyardsnewyork.com",
-    listingUrl: "https://www.hudsonyardsnewyork.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?w=600&h=900&fit=crop",
-    status: "tbc",
-  },
-  {
-    id: "nyc-012",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Coney Island — MCU Park Lawn",
-    hostOrg: "Coney Island Flicks",
-    address: "1904 Surf Ave, Brooklyn, NY 11224",
-    neighbourhood: "Coney Island",
-    lat: 40.5755,
-    lng: -73.9707,
-    film: "Jaws",
-    filmYear: 1975,
-    description:
-      "The ultimate beach-town thriller. Breeze from the Atlantic included.",
-    date: "2026-08-02",
-    time: "8:00 pm",
-    price: "$12",
-    isFree: false,
-    outdoorType: "Waterfront",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://www.coneyisland.com",
-    listingUrl: "https://www.coneyisland.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1489599849927-2ee91cedd3db?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-013",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Socrates Sculpture Park",
-    hostOrg: "Socrates Sculpture Park",
-    address: "32-01 Vernon Blvd, Queens, NY 11106",
-    neighbourhood: "Astoria",
-    lat: 40.7683,
-    lng: -73.9365,
-    film: "Parasite",
-    filmYear: 2019,
-    description:
-      "Bong Joon-ho masterpiece with Long Island City skyline backdrop.",
-    date: "2026-08-15",
-    time: "7:45 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Park",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://socratessculpturepark.org",
-    listingUrl: "https://socratessculpturepark.org",
-    imageUrl:
-      "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-014",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Governors Island — Parade Ground",
-    hostOrg: "Governors Island Arts",
-    address: "Governors Island, New York, NY 10004",
-    neighbourhood: "Governors Island",
-    lat: 40.6895,
-    lng: -74.0169,
-    film: "The Grand Budapest Hotel",
-    filmYear: 2014,
-    description:
-      "Ferry over for cinema on the lawn with Statue of Liberty views.",
-    date: "2026-08-22",
-    time: "8:00 pm",
-    price: "$10 (ferry not included)",
-    isFree: false,
-    outdoorType: "Park",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://www.govisland.com",
-    listingUrl: "https://www.govisland.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "nyc-015",
-    city: "new-york",
-    cityName: "New York",
-    venue: "Domino Park",
-    hostOrg: "Two Trees Management",
-    address: "300 Kent Ave, Brooklyn, NY 11249",
-    neighbourhood: "Williamsburg",
-    lat: 40.7147,
-    lng: -73.9666,
-    film: "Lady Bird",
-    filmYear: 2017,
-    description:
-      "Coming-of-age gem along the East River. Great sunset before showtime.",
-    date: "2026-09-06",
-    time: "7:30 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Waterfront",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://www.dominopark.com",
-    listingUrl: "https://www.dominopark.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1478720568477-83d55bb59607?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-001",
-    city: "london",
-    cityName: "London",
-    venue: "Rooftop Film Club Peckham",
-    hostOrg: "Rooftop Film Club",
-    address: "Bussey Building, 133 Rye Ln, London SE15 4ST",
-    neighbourhood: "Peckham",
-    lat: 51.4699,
-    lng: -0.0694,
-    film: "Everything Everywhere All at Once",
-    filmYear: 2022,
-    description:
-      "Deck chairs, wireless headphones, and panoramic south London sunsets.",
-    date: "2026-04-03",
-    time: "8:30 pm",
-    price: "£17.95",
-    isFree: false,
-    outdoorType: "Rooftop",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: false,
-    bookingUrl: "https://rooftopfilmclub.com",
-    listingUrl: "https://rooftopfilmclub.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-002",
-    city: "london",
-    cityName: "London",
-    venue: "Vauxhall Pleasure Gardens",
-    hostOrg: "Pop Up Screens",
-    address: "Vauxhall Pleasure Gardens, London SE11 5HL",
-    neighbourhood: "Vauxhall",
-    lat: 51.4857,
-    lng: -0.1236,
-    film: "The Italian Job",
-    filmYear: 1969,
-    description:
-      "Swinging London classic in a historic garden. Bar and street food on site.",
-    date: "2026-04-04",
-    time: "8:00 pm",
-    price: "£14",
-    isFree: false,
-    outdoorType: "Historic Garden",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: false,
-    bookingUrl: "https://www.popupscreens.co.uk",
-    listingUrl: "https://www.popupscreens.co.uk",
-    imageUrl:
-      "https://images.unsplash.com/photo-1598899134739-24c46f58b8c9?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-003",
-    city: "london",
-    cityName: "London",
-    venue: "Canary Wharf",
-    hostOrg: "Canary Wharf Arts + Events",
-    address: "Canada Square Park, London E14 5AB",
-    neighbourhood: "Canary Wharf",
-    lat: 51.5045,
-    lng: -0.0187,
-    film: "Inception",
-    filmYear: 2010,
-    description:
-      "Mind-bending blockbuster surrounded by towers. Giant LED-adjacent vibes.",
-    date: "2026-04-05",
-    time: "8:15 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Courtyard",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://canarywharf.com",
-    listingUrl: "https://canarywharf.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-004",
-    city: "london",
-    cityName: "London",
-    venue: "Somerset House",
-    hostOrg: "Somerset House Trust",
-    address: "Strand, London WC2R 1LA",
-    neighbourhood: "Strand",
-    lat: 51.5111,
-    lng: -0.1173,
-    film: "Amélie",
-    filmYear: 2001,
-    description:
-      "Neboclassical courtyard cinema — one of London’s most photogenic outdoor screens.",
-    date: "2026-04-11",
-    time: "9:00 pm",
-    price: "£22",
-    isFree: false,
-    outdoorType: "Courtyard",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: false,
-    bookingUrl: "https://www.somersethouse.org.uk",
-    listingUrl: "https://www.somersethouse.org.uk",
-    imageUrl:
-      "https://images.unsplash.com/photo-1440404653325-ab12749a9e74?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-005",
-    city: "london",
-    cityName: "London",
-    venue: "Regent’s Park Open Air Theatre Lawn",
-    hostOrg: "Open Air Film Club",
-    address: "Inner Circle, Regent’s Park, London NW1 4NU",
-    neighbourhood: "Regent’s Park",
-    lat: 51.5313,
-    lng: -0.152,
-    film: "Pride & Prejudice",
-    filmYear: 2005,
-    description:
-      "Period romance on the lawn near London’s famous open-air stage.",
-    date: "2026-04-18",
-    time: "8:00 pm",
-    price: "£19",
-    isFree: false,
-    outdoorType: "Park",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://openairtheatre.com",
-    listingUrl: "https://openairtheatre.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=600&h=900&fit=crop",
-    status: "tbc",
-  },
-  {
-    id: "lon-006",
-    city: "london",
-    cityName: "London",
-    venue: "Roof East",
-    hostOrg: "Roof East",
-    address: "45a Broadway, London E15 1XD",
-    neighbourhood: "Stratford",
-    lat: 51.5432,
-    lng: -0.0123,
-    film: "Dune",
-    filmYear: 2021,
-    description:
-      "Stratford rooftop with games, street food, and big-screen sci-fi.",
-    date: "2026-05-03",
-    time: "8:30 pm",
-    price: "£16",
-    isFree: false,
-    outdoorType: "Rooftop",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: false,
-    bookingUrl: "https://www.roofeast.com",
-    listingUrl: "https://www.roofeast.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-007",
-    city: "london",
-    cityName: "London",
-    venue: "Battersea Park",
-    hostOrg: "Adventure Cinema",
-    address: "Battersea Park, London SW11 4NJ",
-    neighbourhood: "Battersea",
-    lat: 51.4788,
-    lng: -0.1495,
-    film: "The Goonies",
-    filmYear: 1985,
-    description:
-      "Family adventure on the grass by the Thames. Picnic blankets welcome.",
-    date: "2026-05-16",
-    time: "8:00 pm",
-    price: "£15.50",
-    isFree: false,
-    outdoorType: "Park",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://adventurecinema.co.uk",
-    listingUrl: "https://adventurecinema.co.uk",
-    imageUrl:
-      "https://images.unsplash.com/photo-1574267432553-4b4628081c31?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-008",
-    city: "london",
-    cityName: "London",
-    venue: "Alexandra Palace",
-    hostOrg: "Ally Pally Summer Cinema",
-    address: "Alexandra Palace Way, London N22 7AY",
-    neighbourhood: "Wood Green",
-    lat: 51.5944,
-    lng: -0.1303,
-    film: "Top Gun: Maverick",
-    filmYear: 2022,
-    description:
-      "Need for speed with sweeping views over the city from the palace terrace.",
-    date: "2026-05-30",
-    time: "8:45 pm",
-    price: "£18",
-    isFree: false,
-    outdoorType: "Rooftop",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: false,
-    bookingUrl: "https://www.alexandrapalace.com",
-    listingUrl: "https://www.alexandrapalace.com",
-    imageUrl:
-      "https://images.unsplash.com/photo-1596727147705-61a532a659bd?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-009",
-    city: "london",
-    cityName: "London",
-    venue: "Granary Square",
-    hostOrg: "King’s Cross Summer Screens",
-    address: "Granary Square, London N1C 4BH",
-    neighbourhood: "King’s Cross",
-    lat: 51.5353,
-    lng: -0.1255,
-    film: "The Matrix",
-    filmYear: 1999,
-    description:
-      "Steps and fountain plaza transform into a free sci-fi night.",
-    date: "2026-06-06",
-    time: "9:00 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Courtyard",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://www.kingscross.co.uk",
-    listingUrl: "https://www.kingscross.co.uk",
-    imageUrl:
-      "https://images.unsplash.com/photo-1489599849927-2ee91cedd3db?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-010",
-    city: "london",
-    cityName: "London",
-    venue: "Crystal Palace Park",
-    hostOrg: "Crystal Palace Park Trust",
-    address: "Thicket Rd, London SE19 2GA",
-    neighbourhood: "Crystal Palace",
-    lat: 51.418,
-    lng: -0.0715,
-    film: "Jurassic Park",
-    filmYear: 1993,
-    description:
-      "Dinosaurs among the Victorian dinosaurs — London’s quirkiest outdoor pairing.",
-    date: "2026-06-20",
-    time: "8:15 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Park",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://cppark.org.uk",
-    listingUrl: "https://cppark.org.uk",
-    imageUrl:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-011",
-    city: "london",
-    cityName: "London",
-    venue: "Dulwich Picture Gallery Lawn",
-    hostOrg: "Dulwich Picture Gallery",
-    address: "Gallery Rd, London SE21 7AD",
-    neighbourhood: "Dulwich",
-    lat: 51.4459,
-    lng: -0.0855,
-    film: "Portrait of a Lady on Fire",
-    filmYear: 2019,
-    description:
-      "Painterly French drama on the gallery lawn — art meets cinema.",
-    date: "2026-07-04",
-    time: "8:30 pm",
-    price: "£20",
-    isFree: false,
-    outdoorType: "Historic Garden",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: false,
-    bookingUrl: "https://www.dulwichpicturegallery.org.uk",
-    listingUrl: "https://www.dulwichpicturegallery.org.uk",
-    imageUrl:
-      "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-012",
-    city: "london",
-    cityName: "London",
-    venue: "Paddington Basin",
-    hostOrg: "Merchant Square",
-    address: "Merchant Sq, London W2 1JS",
-    neighbourhood: "Paddington",
-    lat: 51.5195,
-    lng: -0.1722,
-    film: "Paddington",
-    filmYear: 2014,
-    description:
-      "Marmalade sandwiches optional. Canal-side screening by the water.",
-    date: "2026-07-12",
-    time: "8:00 pm",
-    price: "Free",
-    isFree: true,
-    outdoorType: "Waterfront",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://merchant.london",
-    listingUrl: "https://merchant.london",
-    imageUrl:
-      "https://images.unsplash.com/photo-1478720568477-83d55bb59607?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-013",
-    city: "london",
-    cityName: "London",
-    venue: "Greenwich Peninsula — The Jetty",
-    hostOrg: "Greenwich Peninsula",
-    address: "Pilot Walk, London SE10 0QE",
-    neighbourhood: "Greenwich",
-    lat: 51.5025,
-    lng: 0.0081,
-    film: "Moana",
-    filmYear: 2016,
-    description:
-      "Family-friendly animation by the Thames with the O2 glowing nearby.",
-    date: "2026-07-25",
-    time: "7:45 pm",
-    price: "£8",
-    isFree: false,
-    outdoorType: "Waterfront",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://www.greenwichpeninsula.co.uk",
-    listingUrl: "https://www.greenwichpeninsula.co.uk",
-    imageUrl:
-      "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-  {
-    id: "lon-014",
-    city: "london",
-    cityName: "London",
-    venue: "Hackney Marshes Community Screenings",
-    hostOrg: "Hackney Council",
-    address: "Hackney Marshes Centre, London E9 5PF",
-    neighbourhood: "Hackney",
-    lat: 51.561,
-    lng: -0.031,
-    film: "Attack the Block",
-    filmYear: 2011,
-    description:
-      "South London sci-fi on the marshes — local heroes under the stars.",
-    date: "2026-08-08",
-    time: "8:30 pm",
-    price: "Pay what you wish",
-    isFree: false,
-    outdoorType: "Park",
-    dogFriendly: true,
-    wheelchairAccessible: true,
-    byoFood: true,
-    bookingUrl: "https://hackney.gov.uk",
-    listingUrl: "https://hackney.gov.uk",
-    imageUrl:
-      "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&h=900&fit=crop",
-    status: "tbc",
-  },
-  {
-    id: "lon-015",
-    city: "london",
-    cityName: "London",
-    venue: "Backyard Cinema — Summer Garden",
-    hostOrg: "Backyard Cinema",
-    address: "Capital Studios, Ram Quarter, London SW18 1QX",
-    neighbourhood: "Wandsworth",
-    lat: 51.456,
-    lng: -0.192,
-    film: "Mamma Mia!",
-    filmYear: 2008,
-    description:
-      "Immersive garden cinema with cocktails and sing-along energy.",
-    date: "2026-08-30",
-    time: "7:30 pm",
-    price: "£24",
-    isFree: false,
-    outdoorType: "Historic Garden",
-    dogFriendly: false,
-    wheelchairAccessible: true,
-    byoFood: false,
-    bookingUrl: "https://www.backyardcinema.co.uk",
-    listingUrl: "https://www.backyardcinema.co.uk",
-    imageUrl:
-      "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=600&h=900&fit=crop",
-    status: "confirmed",
-  },
-];
+type ScreeningRow = {
+  id: string;
+  city_slug: string;
+  city_name: string;
+  venue: string;
+  host_org: string;
+  address: string;
+  neighbourhood: string;
+  lat: number;
+  lng: number;
+  film: string;
+  film_year: number;
+  description: string;
+  screening_date: string;
+  screening_time: string;
+  price: string;
+  is_free: boolean;
+  outdoor_type: string;
+  dog_friendly: boolean;
+  wheelchair_accessible: boolean;
+  byo_food: boolean;
+  booking_url: string;
+  listing_url: string;
+  image_url: string;
+  added_by: string | null;
+  status: string;
+};
 
-export function getCityBySlug(slug: string): City | undefined {
-  return CITIES.find((c) => c.slug === slug);
+function mapCity(row: CityRow): City {
+  return {
+    slug: row.slug,
+    name: row.name,
+    country: row.country,
+    lat: Number(row.lat),
+    lng: Number(row.lng),
+    addedBy: row.added_by ?? undefined,
+    addedDate: row.added_date ?? undefined,
+  };
 }
 
-export function getScreeningsByCity(citySlug: string): Screening[] {
-  return SCREENINGS.filter((s) => s.city === citySlug);
+function mapScreening(row: ScreeningRow): Screening | null {
+  if (!row?.id || !row.city_slug) return null;
+
+  const status = row.status === "tbc" ? "tbc" : "confirmed";
+  const date =
+    row.screening_date != null
+      ? String(row.screening_date).slice(0, 10)
+      : "";
+
+  if (!date) return null;
+
+  return {
+    id: String(row.id),
+    city: String(row.city_slug),
+    cityName: String(row.city_name ?? ""),
+    venue: String(row.venue ?? ""),
+    hostOrg: String(row.host_org ?? ""),
+    address: String(row.address ?? ""),
+    neighbourhood: String(row.neighbourhood ?? ""),
+    lat: Number(row.lat) || 0,
+    lng: Number(row.lng) || 0,
+    film: String(row.film ?? ""),
+    filmYear: Number(row.film_year) || 0,
+    description: String(row.description ?? ""),
+    date,
+    time: String(row.screening_time ?? ""),
+    price: String(row.price ?? ""),
+    isFree: Boolean(row.is_free),
+    outdoorType: String(row.outdoor_type ?? ""),
+    dogFriendly: Boolean(row.dog_friendly),
+    wheelchairAccessible: Boolean(row.wheelchair_accessible),
+    byoFood: Boolean(row.byo_food),
+    bookingUrl: String(row.booking_url ?? ""),
+    listingUrl: String(row.listing_url ?? ""),
+    imageUrl: String(row.image_url ?? ""),
+    addedBy: row.added_by ?? undefined,
+    status,
+  };
+}
+
+export const fetchCities = cache(async (): Promise<City[]> => {
+  const supabase = tryCreateSupabaseClient();
+  if (!supabase) {
+    console.warn("[Supabase] Skipping fetchCities: client not configured");
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("cities")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("[Supabase] fetchCities:", error.message);
+      return [];
+    }
+
+    return ((data ?? []) as CityRow[]).map(mapCity);
+  } catch (e) {
+    console.error("[Supabase] fetchCities:", e);
+    return [];
+  }
+});
+
+export const fetchScreenings = cache(async (): Promise<Screening[]> => {
+  const supabase = tryCreateSupabaseClient();
+  if (!supabase) {
+    console.warn("[Supabase] Skipping fetchScreenings: client not configured");
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("screenings")
+      .select("*")
+      .order("screening_date", { ascending: true })
+      .order("screening_time", { ascending: true });
+
+    if (error) {
+      console.error("[Supabase] fetchScreenings:", error.message);
+      return [];
+    }
+
+    return ((data ?? []) as ScreeningRow[])
+      .map(mapScreening)
+      .filter((s): s is Screening => s !== null);
+  } catch (e) {
+    console.error("[Supabase] fetchScreenings:", e);
+    return [];
+  }
+});
+
+export async function fetchCityBySlug(
+  slug: string
+): Promise<City | undefined> {
+  const cities = await fetchCities();
+  return cities.find((c) => c.slug === slug);
+}
+
+export async function fetchScreeningsByCity(
+  citySlug: string
+): Promise<Screening[]> {
+  const screenings = await fetchScreenings();
+  return screenings.filter((s) => s.city === citySlug);
 }

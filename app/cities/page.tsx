@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { CitiesGrid } from "@/components/CitiesGrid";
-import { CITIES, SCREENINGS } from "@/lib/data";
+import { fetchCities, fetchScreenings } from "@/lib/data";
 import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -15,7 +15,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function CitiesPage() {
+export default async function CitiesPage() {
+  const [cities, screenings] = await Promise.all([
+    fetchCities(),
+    fetchScreenings(),
+  ]);
+
   return (
     <main className="flex-1">
       <section className="border-b border-white/10">
@@ -30,7 +35,7 @@ export default function CitiesPage() {
         </div>
       </section>
       <section className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:pb-20">
-        <CitiesGrid cities={CITIES} screenings={SCREENINGS} />
+        <CitiesGrid cities={cities} screenings={screenings} />
       </section>
     </main>
   );

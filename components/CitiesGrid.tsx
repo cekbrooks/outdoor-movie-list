@@ -46,6 +46,17 @@ export function CitiesGrid({ cities, screenings }: Props) {
 
   const launchSlugs = new Set(["new-york", "london"]);
 
+  if (cities.length === 0) {
+    return (
+      <p
+        role="status"
+        className="rounded-2xl border border-white/10 bg-[#0d1428]/50 px-6 py-10 text-center text-[#f0ede8]/80"
+      >
+        No cities listed yet.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap gap-2">

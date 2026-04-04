@@ -1,9 +1,8 @@
 import type { MetadataRoute } from "next";
+import { fetchCities, fetchScreenings } from "@/lib/data";
 import { allFilmSlugs, allVenueSlugs } from "@/lib/queries";
 
 const ORIGIN = "https://outdoormovielist.com";
-
-const CITY_SLUGS = ["new-york", "london"] as const;
 
 const PERIODS = [
   "today",
@@ -30,7 +29,6 @@ type SitemapRow = {
   priority: number;
 };
 
-/** Absolute URL under ORIGIN, never with a trailing slash (except scheme slashes). */
 function buildUrl(path: string): string {
   const t = path.trim();
   if (t === "" || t === "/") {
@@ -45,7 +43,12 @@ function clampPriority(p: number): number {
   return Math.min(1, Math.max(0, p));
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [cities, screenings] = await Promise.all([
+    fetchCities(),
+    fetchScreenings(),
+  ]);
+
   const lastModified: Date = new Date();
 
   const raw: SitemapRow[] = [
@@ -57,16 +60,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  for (const city of CITY_SLUGS) {
+  for (const city of cities) {
     raw.push({
-      url: buildUrl(`/${city}`),
+      url: buildUrl(`/${city.slug}`),
       lastModified,
       changeFrequency: "daily",
       priority: clampPriority(0.9),
     });
     for (const period of PERIODS) {
       raw.push({
-        url: buildUrl(`/${city}/${period}`),
+        url: buildUrl(`/${city.slug}/${period}`),
         lastModified,
         changeFrequency: "daily",
         priority: clampPriority(0.85),
@@ -95,7 +98,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   );
 
-  for (const slug of allVenueSlugs()) {
+  for (const slug of allVenueSlugs(screenings)) {
     raw.push({
       url: buildUrl(`/venues/${slug}`),
       lastModified,
@@ -104,7 +107,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     });
   }
 
-  for (const slug of allFilmSlugs()) {
+  for (const slug of allFilmSlugs(screenings)) {
     raw.push({
       url: buildUrl(`/movies/${slug}`),
       lastModified,

@@ -3,8 +3,9 @@ import Link from "next/link";
 import { EmailCapture } from "@/components/EmailCapture";
 import { NearMeButton } from "@/components/NearMeButton";
 import { ScreeningsMapLoader } from "@/components/ScreeningsMapLoader";
+import { NoScreenings } from "@/components/NoScreenings";
 import { ScreeningCard } from "@/components/ScreeningCard";
-import { CITIES, SCREENINGS } from "@/lib/data";
+import { fetchCities, fetchScreenings } from "@/lib/data";
 import { isUpcoming } from "@/lib/dates";
 import { sortScreeningsByDate } from "@/lib/queries";
 import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
@@ -24,11 +25,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [cities, allScreenings] = await Promise.all([
+    fetchCities(),
+    fetchScreenings(),
+  ]);
+
   const now = new Date();
-  const upcoming = SCREENINGS.filter((s) => isUpcoming(s, now)).sort(
-    sortScreeningsByDate
-  );
+  const upcoming = allScreenings
+    .filter((s) => isUpcoming(s, now))
+    .sort(sortScreeningsByDate);
 
   return (
     <main className="flex-1">
@@ -67,41 +73,54 @@ export default function HomePage() {
         <h2 className="font-display text-2xl font-semibold text-[#f0ede8] md:text-3xl">
           Choose a city
         </h2>
-        <div className="mt-8 grid gap-6 md:grid-cols-2">
-          {CITIES.map((c) => {
-            const count = SCREENINGS.filter(
-              (s) => s.city === c.slug && isUpcoming(s, now)
-            ).length;
-            return (
-              <Link
-                key={c.slug}
-                href={`/${c.slug}`}
-                className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#0d1428]/80 p-8 transition duration-300 hover:-translate-y-0.5 hover:border-[#f5a623]/35 hover:shadow-[0_0_50px_-12px_rgba(245,166,35,0.35)]"
-              >
-                <div
-                  className="pointer-events-none absolute inset-0 opacity-[0.05]"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-                  }}
-                />
-                <div className="relative flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-display text-3xl font-semibold text-[#f0ede8] group-hover:text-[#f5a623]">
-                      {c.name}
-                    </h3>
-                    <p className="mt-1 text-sm text-white/50">{c.country}</p>
+        {cities.length === 0 ? (
+          <p
+            role="status"
+            className="mt-8 rounded-2xl border border-white/10 bg-[#0d1428]/50 px-6 py-10 text-center text-[#f0ede8]/80"
+          >
+            No cities listed yet. Check back soon or{" "}
+            <Link href="/suggest-a-city" className="text-[#f5a623] hover:underline">
+              suggest a city
+            </Link>
+            .
+          </p>
+        ) : (
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            {cities.map((c) => {
+              const count = allScreenings.filter(
+                (s) => s.city === c.slug && isUpcoming(s, now)
+              ).length;
+              return (
+                <Link
+                  key={c.slug}
+                  href={`/${c.slug}`}
+                  className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#0d1428]/80 p-8 transition duration-300 hover:-translate-y-0.5 hover:border-[#f5a623]/35 hover:shadow-[0_0_50px_-12px_rgba(245,166,35,0.35)]"
+                >
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-[0.05]"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+                    }}
+                  />
+                  <div className="relative flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="font-display text-3xl font-semibold text-[#f0ede8] group-hover:text-[#f5a623]">
+                        {c.name}
+                      </h3>
+                      <p className="mt-1 text-sm text-white/50">{c.country}</p>
+                    </div>
+                    <span className="rounded-full bg-[#f5a623]/15 px-4 py-2 text-sm font-bold text-[#f5a623] ring-1 ring-[#f5a623]/30">
+                      {count} upcoming
+                    </span>
                   </div>
-                  <span className="rounded-full bg-[#f5a623]/15 px-4 py-2 text-sm font-bold text-[#f5a623] ring-1 ring-[#f5a623]/30">
-                    {count} upcoming
-                  </span>
-                </div>
-                <p className="relative mt-6 text-sm text-white/55">
-                  Browse map, filters, and this week&apos;s open-air lineup →
-                </p>
-              </Link>
-            );
-          })}
-        </div>
+                  <p className="relative mt-6 text-sm text-white/55">
+                    Browse map, filters, and this week&apos;s open-air lineup →
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section className="border-y border-white/10 bg-[#070b14]/80 py-14 md:py-20">
@@ -113,7 +132,11 @@ export default function HomePage() {
             Gold pins for New York, blue for London. Tap clusters to zoom in.
           </p>
           <div className="mt-8">
-            <ScreeningsMapLoader screenings={upcoming} />
+            {upcoming.length === 0 ? (
+              <NoScreenings />
+            ) : (
+              <ScreeningsMapLoader screenings={upcoming} />
+            )}
           </div>
         </div>
       </section>
@@ -123,13 +146,19 @@ export default function HomePage() {
           Upcoming screenings
         </h2>
         <p className="mt-2 text-sm text-white/55">Sorted by date, all cities.</p>
-        <ul className="mt-10 grid list-none gap-6 p-0">
-          {upcoming.map((s) => (
-            <li key={s.id}>
-              <ScreeningCard screening={s} showCity />
-            </li>
-          ))}
-        </ul>
+        <div className="mt-10">
+          {upcoming.length === 0 ? (
+            <NoScreenings />
+          ) : (
+            <ul className="grid list-none gap-6 p-0">
+              {upcoming.map((s) => (
+                <li key={s.id}>
+                  <ScreeningCard screening={s} showCity />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
 
       <section className="border-t border-white/10 bg-[#0d1428]/40 py-14 md:py-20">

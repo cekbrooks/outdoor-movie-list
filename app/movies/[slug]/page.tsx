@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { ScreeningCard } from "@/components/ScreeningCard";
+import { fetchScreenings } from "@/lib/data";
 import {
   getFilmMetaFromSlug,
   getScreeningsByFilmSlug,
@@ -16,8 +17,9 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const meta = getFilmMetaFromSlug(slug);
-  const rows = getScreeningsByFilmSlug(slug);
+  const screenings = await fetchScreenings();
+  const meta = getFilmMetaFromSlug(screenings, slug);
+  const rows = getScreeningsByFilmSlug(screenings, slug);
   const first = rows[0];
   if (!meta || !first) return { title: "Film not found" };
   const title = `${meta.film} (${meta.filmYear}) — Outdoor screenings — ${SITE_NAME}`;
@@ -43,10 +45,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function FilmPage({ params }: Props) {
   const { slug } = await params;
-  const rows = getScreeningsByFilmSlug(slug).sort(sortScreeningsByDate);
+  const screenings = await fetchScreenings();
+  const rows = getScreeningsByFilmSlug(screenings, slug).sort(
+    sortScreeningsByDate
+  );
   if (rows.length === 0) notFound();
 
-  const meta = getFilmMetaFromSlug(slug)!;
+  const meta = getFilmMetaFromSlug(screenings, slug)!;
   const first = rows[0];
   const jsonLd = eventsJsonLdArray(rows);
 
