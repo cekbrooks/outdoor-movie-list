@@ -40,7 +40,7 @@ export function filterByPeriod(
     case "tonight":
       return upcoming.filter((s) => isScreeningTonight(s.date));
     case "this-week":
-      return upcoming.filter((s) => isWithinNextDays(s, now, 7));
+      return upcoming.filter((s) => isWithinNextDays(s.date, 7));
     case "this-weekend":
       return upcoming.filter((s) => isThisWeekend(s.date));
     case "this-month":
