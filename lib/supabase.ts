@@ -1,32 +1,73 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js'
 
-/**
- * Browser-safe defaults are omitted on the server so RSC / Route Handlers
- * do not touch `localStorage`. Use this factory per request in server code.
- */
-export function createSupabaseClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-  if (!url || !anonKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
-    );
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+export async function getScreenings(city?: string) {
+  let query = supabase
+    .from('screenings')
+    .select('*')
+    .order('date', { ascending: true })
+
+  if (city) {
+    query = query.eq('city', city)
   }
 
-  return createClient(url, anonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  const { data, error } = await query
+  if (error) console.error('Error fetching screenings:', error)
+  return data || []
 }
 
-/** Same as {@link createSupabaseClient} but returns `null` if env vars are missing (no throw). */
-export function tryCreateSupabaseClient(): SupabaseClient | null {
-  try {
-    return createSupabaseClient();
-  } catch {
-    return null;
-  }
+export async function getCities() {
+  const { data, error } = await supabase
+    .from('cities')
+    .select('*')
+    .order('name', { ascending: true })
+
+  if (error) console.error('Error fetching cities:', error)
+  return data || []
+}
+
+export async function getScreeningsByDate(city: string, date: string) {
+  const { data, error } = await supabase
+    .from('screenings')
+    .select('*')
+    .eq('city', city)
+    .eq('date', date)
+    .order('time', { ascending: true })
+
+  if (error) console.error('Error fetching screenings by date:', error)
+  return data || []
+}
+
+export async function getFreeScreenings(city: string) {
+  const { data, error } = await supabase
+    .from('screenings')
+    .select('*')
+    .eq('city', city)
+    .eq('is_free', true)
+    .order('date', { ascending: true })
+
+  if (error) console.error('Error fetching free screenings:', error)
+  return data || []
+}
+
+export async function addCitySuggestion(
+  cityName: string,
+  suggestedByName: string,
+  suggestedByEmail: string
+) {
+  const { data, error } = await supabase
+    .from('city_suggestions')
+    .insert([{
+      city_name: cityName,
+      suggested_by_name: suggestedByName,
+      suggested_by_email: suggestedByEmail,
+      status: 'pending'
+    }])
+
+  if (error) console.error('Error adding city suggestion:', error)
+  return data
 }
