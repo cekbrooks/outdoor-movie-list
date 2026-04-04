@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
+import { allFilmSlugs, allVenueSlugs } from "@/lib/queries";
 
-/** Used when `NEXT_PUBLIC_SITE_URL` is unset or invalid (no `new URL()`). */
-const FALLBACK_ORIGIN = "https://outdoormovielist.com";
+const ORIGIN = "https://outdoormovielist.com";
 
 const CITY_SLUGS = ["new-york", "london"] as const;
 
@@ -14,89 +14,117 @@ const PERIODS = [
   "free",
 ] as const;
 
-function getSiteOrigin(): string {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim() ?? "";
+type ChangeFreq =
+  | "always"
+  | "hourly"
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "yearly"
+  | "never";
 
-  if (raw && /:\/\//.test(raw) && !/^https?:\/\//i.test(raw)) {
-    return FALLBACK_ORIGIN;
+type SitemapRow = {
+  url: string;
+  lastModified: Date;
+  changeFrequency: ChangeFreq;
+  priority: number;
+};
+
+/** Absolute URL under ORIGIN, never with a trailing slash (except scheme slashes). */
+function buildUrl(path: string): string {
+  const t = path.trim();
+  if (t === "" || t === "/") {
+    return ORIGIN;
   }
-
-  let origin: string;
-  if (!raw) {
-    origin = FALLBACK_ORIGIN;
-  } else if (/^https?:\/\//i.test(raw)) {
-    origin = raw.replace(/\/+$/, "");
-  } else {
-    origin = `https://${raw.replace(/^\/+/, "").replace(/\/+$/, "")}`;
-  }
-
-  const rest = origin.replace(/^https?:\/\//i, "");
-  if (!rest || /^[/\s]/.test(rest)) {
-    return FALLBACK_ORIGIN;
-  }
-
-  return origin;
+  const segment = t.startsWith("/") ? t : `/${t}`;
+  return `${ORIGIN}${segment}`.replace(/\/+$/, "");
 }
 
-/** Build absolute URLs with string concat only. Home = origin with no trailing slash. */
-function absoluteUrl(path: string): string {
-  const origin = getSiteOrigin();
-  if (path === "/" || path === "") {
-    return origin;
-  }
-  const p = path.startsWith("/") ? path : `/${path}`;
-  return `${origin}${p}`;
+function clampPriority(p: number): number {
+  if (Number.isNaN(p)) return 0.5;
+  return Math.min(1, Math.max(0, p));
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
-  const entries: MetadataRoute.Sitemap = [];
+  const lastModified: Date = new Date();
 
-  entries.push({
-    url: absoluteUrl("/"),
-    lastModified,
-    changeFrequency: "daily",
-    priority: 1,
-  });
-
-  for (const city of CITY_SLUGS) {
-    entries.push({
-      url: absoluteUrl(`/${city}`),
+  const raw: SitemapRow[] = [
+    {
+      url: buildUrl("/"),
       lastModified,
       changeFrequency: "daily",
-      priority: 0.9,
-    });
+      priority: clampPriority(1),
+    },
+  ];
 
+  for (const city of CITY_SLUGS) {
+    raw.push({
+      url: buildUrl(`/${city}`),
+      lastModified,
+      changeFrequency: "daily",
+      priority: clampPriority(0.9),
+    });
     for (const period of PERIODS) {
-      entries.push({
-        url: absoluteUrl(`/${city}/${period}`),
+      raw.push({
+        url: buildUrl(`/${city}/${period}`),
         lastModified,
         changeFrequency: "daily",
-        priority: 0.85,
+        priority: clampPriority(0.85),
       });
     }
   }
 
-  entries.push(
+  raw.push(
     {
-      url: absoluteUrl("/near-me"),
+      url: buildUrl("/near-me"),
       lastModified,
       changeFrequency: "weekly",
-      priority: 0.75,
+      priority: clampPriority(0.75),
     },
     {
-      url: absoluteUrl("/suggest-a-city"),
+      url: buildUrl("/suggest-a-city"),
       lastModified,
       changeFrequency: "monthly",
-      priority: 0.65,
+      priority: clampPriority(0.65),
     },
     {
-      url: absoluteUrl("/cities"),
+      url: buildUrl("/cities"),
       lastModified,
       changeFrequency: "weekly",
-      priority: 0.7,
+      priority: clampPriority(0.7),
     }
   );
 
-  return entries;
+  for (const slug of allVenueSlugs()) {
+    raw.push({
+      url: buildUrl(`/venues/${slug}`),
+      lastModified,
+      changeFrequency: "weekly",
+      priority: clampPriority(0.6),
+    });
+  }
+
+  for (const slug of allFilmSlugs()) {
+    raw.push({
+      url: buildUrl(`/movies/${slug}`),
+      lastModified,
+      changeFrequency: "weekly",
+      priority: clampPriority(0.6),
+    });
+  }
+
+  const seen = new Set<string>();
+  const deduped: MetadataRoute.Sitemap = [];
+  for (const row of raw) {
+    if (seen.has(row.url)) continue;
+    seen.add(row.url);
+    deduped.push({
+      url: row.url,
+      lastModified: row.lastModified,
+      changeFrequency: row.changeFrequency,
+      priority: row.priority,
+    });
+  }
+
+  return deduped;
 }
