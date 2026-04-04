@@ -12,7 +12,7 @@ export function screeningToEventJsonLd(s: Screening) {
     "@context": "https://schema.org",
     "@type": "Event",
     name: `${s.film} at ${s.venue}`,
-    startDate: screeningStartISO(s),
+    startDate: screeningStartISO(s.date, s.time),
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     eventStatus: "https://schema.org/EventScheduled",
     location: {
