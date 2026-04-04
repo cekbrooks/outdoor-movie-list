@@ -43,7 +43,7 @@ export default async function CityPage({ params }: Props) {
   const now = new Date();
   const byCity = await fetchScreeningsByCity(slug);
   const screenings = byCity
-    .filter((s) => isUpcoming(s, now))
+    .filter((s) => isUpcoming(s.date))
     .sort(sortScreeningsByDate);
 
   const jsonLd = eventsJsonLdArray(screenings);
