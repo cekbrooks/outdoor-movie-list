@@ -11,8 +11,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { Resend } = await import('resend');
-  const resend = new Resend(process.env.RESEND_API_KEY);
 
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/screenings?select=id,film,film_year,city_name&image_url=is.null&archived=is.false`,
@@ -51,13 +49,4 @@ export async function GET(request: Request) {
     } catch { failed.push(s.film); }
   }
 
-  const date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  await resend.emails.send({
-    from: 'Outdoor Movie List <onboarding@resend.dev>',
-    to: process.env.CRON_NOTIFY_EMAIL!,
-    subject: `OML Daily Update — ${date}`,
-    html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px"><h2 style="color:#f5a623">OML Daily Poster Update</h2><p>${date}</p>${updated.length > 0 ? `<h3 style="color:#22c55e">Posters added (${updated.length})</h3><ul>${updated.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}${skipped.length > 0 ? `<h3 style="color:#f59e0b">No poster found (${skipped.length})</h3><ul>${skipped.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}${failed.length > 0 ? `<h3 style="color:#ef4444">Errors (${failed.length})</h3><ul>${failed.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}</div>`
-  });
-
-  return NextResponse.json({ success: true, processed: toProcess.length, updated: updated.length, skipped: skipped.length, failed: failed.length });
 }
