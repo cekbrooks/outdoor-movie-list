@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
-import { Resend } from 'resend';
 
 const TMDB_KEY = process.env.TMDB_API_KEY!;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SKIP_TERMS = ['tbc', 'various', 'rolling', 'tba', 'to be'];
 
 export async function GET(request: Request) {
@@ -13,7 +11,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Initialise Resend inside the function so it's not called at build time
+  const { Resend } = await import('resend');
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   const res = await fetch(
@@ -41,65 +39,24 @@ export async function GET(request: Request) {
       );
       const tmdbData = await tmdbRes.json();
       const movie = tmdbData.results?.[0];
-
-      if (!movie?.poster_path) {
-        skipped.push(`${s.film} (${s.city_name})`);
-        continue;
-      }
-
+      if (!movie?.poster_path) { skipped.push(`${s.film} (${s.city_name})`); continue; }
       const imageUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
-
       await fetch(`${SUPABASE_URL}/rest/v1/screenings?id=eq.${s.id}`, {
         method: 'PATCH',
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=minimal'
-        },
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
         body: JSON.stringify({ image_url: imageUrl })
       });
-
       updated.push(`${s.film} (${s.city_name})`);
       await new Promise(r => setTimeout(r, 200));
-    } catch {
-      failed.push(`${s.film} (${s.city_name})`);
-    }
+    } catch { failed.push(s.film); }
   }
 
   const date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const hasActivity = updated.length > 0 || skipped.length > 0 || failed.length > 0;
-
   await resend.emails.send({
     from: 'Outdoor Movie List <onboarding@resend.dev>',
     to: process.env.CRON_NOTIFY_EMAIL!,
     subject: `OML Daily Update — ${date}`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-        <h2 style="color: #f5a623;">🎬 Outdoor Movie List — Daily Poster Update</h2>
-        <p style="color: #666;">${date}</p>
-
-        ${!hasActivity ? `<p>Nothing to process today — all screenings already have posters or no new films were added.</p>` : ''}
-
-        ${updated.length > 0 ? `
-          <h3 style="color: #22c55e;">✅ Posters added (${updated.length})</h3>
-          <ul>${updated.map(f => `<li>${f}</li>`).join('')}</ul>
-        ` : ''}
-
-        ${skipped.length > 0 ? `
-          <h3 style="color: #f59e0b;">⚠️ No poster found (${skipped.length})</h3>
-          <ul>${skipped.map(f => `<li>${f}</li>`).join('')}</ul>
-        ` : ''}
-
-        ${failed.length > 0 ? `
-          <h3 style="color: #ef4444;">❌ Errors (${failed.length})</h3>
-          <ul>${failed.map(f => `<li>${f}</li>`).join('')}</ul>
-        ` : ''}
-
-        <hr style="margin: 24px 0; border: none; border-top: 1px solid #eee;" />
-        <p style="color: #999; font-size: 12px;">Sent automatically by the Outdoor Movie List cron job.</p>
-      </div>
-    `
+    html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px"><h2 style="color:#f5a623">OML Daily Poster Update</h2><p>${date}</p>${updated.length > 0 ? `<h3 style="color:#22c55e">Posters added (${updated.length})</h3><ul>${updated.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}${skipped.length > 0 ? `<h3 style="color:#f59e0b">No poster found (${skipped.length})</h3><ul>${skipped.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}${failed.length > 0 ? `<h3 style="color:#ef4444">Errors (${failed.length})</h3><ul>${failed.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}</div>`
   });
 
   return NextResponse.json({ success: true, processed: toProcess.length, updated: updated.length, skipped: skipped.length, failed: failed.length });
