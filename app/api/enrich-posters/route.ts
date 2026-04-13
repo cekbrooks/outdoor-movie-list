@@ -4,7 +4,6 @@ import { Resend } from 'resend';
 const TMDB_KEY = process.env.TMDB_API_KEY!;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const SKIP_TERMS = ['tbc', 'various', 'rolling', 'tba', 'to be'];
 
@@ -13,6 +12,9 @@ export async function GET(request: Request) {
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Initialise Resend inside the function so it's not called at build time
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/screenings?select=id,film,film_year,city_name&image_url=is.null&archived=is.false`,
@@ -65,7 +67,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Send summary email
   const date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const hasActivity = updated.length > 0 || skipped.length > 0 || failed.length > 0;
 
