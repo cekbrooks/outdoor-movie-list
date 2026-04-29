@@ -25,12 +25,13 @@ export const maxDuration = 60;
 
 type ScreeningRow = {
   id: string;
+  // Live DB uses `city` (slug). The reference schema in lib/supabase-schema.sql
+  // calls it `city_slug` but that column doesn't exist in the actual table.
   city: string | null;
-  city_slug: string | null;
   venue: string;
   film: string;
-  screening_date: string;
-  screening_time: string;
+  date: string;
+  time: string;
   status: string;
   listing_url: string | null;
 };
@@ -51,9 +52,9 @@ function key(s: { city: string; venue: string; date: string; film: string }) {
 }
 
 function toEntry(row: ScreeningRow): SnapshotEntry {
-  const city = (row.city || row.city_slug || "").trim();
+  const city = (row.city || "").trim();
   const venue = (row.venue || "").trim();
-  const date = (row.screening_date || "").slice(0, 10);
+  const date = (row.date || "").slice(0, 10);
   const film = (row.film || "").trim();
   return {
     k: key({ city, venue, date, film }),
@@ -61,7 +62,7 @@ function toEntry(row: ScreeningRow): SnapshotEntry {
     venue,
     date,
     film,
-    time: (row.screening_time || "").trim(),
+    time: (row.time || "").trim(),
     status: row.status || "confirmed",
     url: row.listing_url || "",
   };
@@ -142,7 +143,7 @@ async function getSourceHealth(): Promise<SourceHealth[]> {
     const { count } = await supabase
       .from("screenings")
       .select("*", { count: "exact", head: true })
-      .gte("screening_date", today)
+      .gte("date", today)
       .ilike("venue", `%${(s.name || "").split(" - ")[0]}%`);
     const hours = s.last_scraped
       ? Math.round((Date.now() - new Date(s.last_scraped).getTime()) / 3_600_000)
@@ -301,10 +302,8 @@ export async function GET(req: NextRequest) {
   // ---- 3. Today's screenings (upcoming) ----
   const { data: rows, error: rowsErr } = await supabase
     .from("screenings")
-    .select(
-      "id, city, city_slug, venue, film, screening_date, screening_time, status, listing_url"
-    )
-    .gte("screening_date", runDate);
+    .select("id, city, venue, film, date, time, status, listing_url")
+    .gte("date", runDate);
   if (rowsErr) {
     return NextResponse.json({ error: `screenings query: ${rowsErr.message}` }, { status: 500 });
   }
