@@ -25,8 +25,6 @@ export const maxDuration = 60;
 
 type ScreeningRow = {
   id: string;
-  // Live DB uses `city` (slug). The reference schema in lib/supabase-schema.sql
-  // calls it `city_slug` but that column doesn't exist in the actual table.
   city: string | null;
   venue: string;
   film: string;

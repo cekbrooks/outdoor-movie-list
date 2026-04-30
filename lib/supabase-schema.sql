@@ -1,5 +1,12 @@
--- Supabase-ready schema for Outdoor Movie List (reference; not applied by the app)
+-- Reference schema for the Outdoor Movie List Supabase project.
+--
+-- This file mirrors the live `public` schema (verified via PostgREST
+-- introspection). It is a reference document — the app does not apply it.
+-- If you change the live schema, update this file in the same PR.
 
+-- ---------------------------------------------------------------------------
+-- cities
+-- ---------------------------------------------------------------------------
 create table if not exists cities (
   id uuid primary key default gen_random_uuid(),
   slug text unique not null,
@@ -8,13 +15,20 @@ create table if not exists cities (
   lat double precision not null,
   lng double precision not null,
   added_by text,
-  added_date date,
-  created_at timestamptz default now()
+  added_date timestamptz,
+  screening_count int not null default 0
 );
 
+-- ---------------------------------------------------------------------------
+-- screenings
+--
+-- Live columns use short names: `city` (slug FK), `date`, `time`.
+-- A previous draft of this file used `city_slug` / `screening_date` /
+-- `screening_time` — those columns do not exist in the live table.
+-- ---------------------------------------------------------------------------
 create table if not exists screenings (
-  id text primary key,
-  city_slug text not null references cities (slug),
+  id uuid primary key default gen_random_uuid(),
+  city text not null references cities (slug),
   city_name text not null,
   venue text not null,
   host_org text not null,
@@ -25,8 +39,8 @@ create table if not exists screenings (
   film text not null,
   film_year int not null,
   description text not null,
-  screening_date date not null,
-  screening_time text not null,
+  date date not null,
+  time text not null,
   price text not null,
   is_free boolean not null default false,
   outdoor_type text not null,
@@ -35,25 +49,47 @@ create table if not exists screenings (
   byo_food boolean not null default false,
   booking_url text not null,
   listing_url text not null,
-  image_url text not null,
+  image_url text,
   added_by text,
   status text not null check (status in ('confirmed', 'tbc')),
-  created_at timestamptz default now()
+  archived boolean not null default false,
+  tmdb_id int,
+  created_at timestamptz not null default now(),
+  unique (city, venue, date, film)
 );
 
-create index if not exists idx_screenings_city_date on screenings (city_slug, screening_date);
+create index if not exists idx_screenings_city_date on screenings (city, date);
+create index if not exists idx_screenings_archived on screenings (archived);
 
-create table if not exists email_subscribers (
+-- ---------------------------------------------------------------------------
+-- sources
+--
+-- Scraping sources consumed by n8n. `scraper_type` selects the parser;
+-- `last_scraped` is updated by n8n on each successful run and read by the
+-- daily-update cron for the source-health table in the diff email.
+-- ---------------------------------------------------------------------------
+create table if not exists sources (
   id uuid primary key default gen_random_uuid(),
-  email text not null,
-  city_preference text,
-  created_at timestamptz default now()
+  city text not null references cities (slug),
+  name text not null,
+  url text not null,
+  scraper_type text not null,
+  active boolean not null default true,
+  last_scraped timestamptz,
+  notes text,
+  created_at timestamptz not null default now()
 );
 
+create index if not exists idx_sources_active on sources (active);
+
+-- ---------------------------------------------------------------------------
+-- city_suggestions
+-- ---------------------------------------------------------------------------
 create table if not exists city_suggestions (
   id uuid primary key default gen_random_uuid(),
   city_name text not null,
-  submitter_name text not null,
-  submitter_email text,
-  created_at timestamptz default now()
+  suggested_by_name text not null,
+  suggested_by_email text,
+  status text not null default 'pending',
+  created_at timestamptz not null default now()
 );
