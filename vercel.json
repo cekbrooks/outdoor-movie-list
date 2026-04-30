@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/enrich-posters",
-      "schedule": "0 2 * * *"
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/cron/daily-update",

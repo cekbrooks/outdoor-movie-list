@@ -66,7 +66,7 @@ export default async function FilmPage({ params }: Props) {
           <div className="mt-6 flex flex-col gap-8 md:flex-row md:items-start">
             <div className="relative mx-auto aspect-[2/3] w-full max-w-[240px] shrink-0 overflow-hidden rounded-2xl border border-white/10 md:mx-0">
               <Image
-                src={first.imageUrl}
+                src={first.imageUrl || "/placeholder-poster.svg"}
                 alt={`${meta.film} poster`}
                 fill
                 className="object-cover"

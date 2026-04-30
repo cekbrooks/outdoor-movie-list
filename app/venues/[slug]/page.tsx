@@ -81,7 +81,7 @@ export default async function VenuePage({ params }: Props) {
             </div>
             <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-white/10">
               <Image
-                src={v.imageUrl}
+                src={v.imageUrl || "/placeholder-poster.svg"}
                 alt=""
                 fill
                 className="object-cover"
