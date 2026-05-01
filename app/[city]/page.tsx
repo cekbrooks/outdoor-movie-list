@@ -11,7 +11,7 @@ import { sortScreeningsByDate } from "@/lib/queries";
 import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { PERIOD_HEADING, TIME_PERIODS } from "@/lib/time-period";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type Props = { params: Promise<{ city: string }> };
 

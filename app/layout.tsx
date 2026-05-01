@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: SITE_NAME,
     description:
-      "Discover outdoor movie screenings in cities around the world.",
+      "Every outdoor movie. Every city. All summer. Parks, rooftops, drive-ins, and gardens.",
     images: [defaultOgImage],
   },
 };

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmailCapture } from "@/components/EmailCapture";
+import { JsonLd } from "@/components/JsonLd";
 import { NearMeButton } from "@/components/NearMeButton";
 import { ScreeningsMapLoader } from "@/components/ScreeningsMapLoader";
 import { NoScreenings } from "@/components/NoScreenings";
@@ -10,7 +11,7 @@ import { isUpcoming } from "@/lib/dates";
 import { sortScreeningsByDate } from "@/lib/queries";
 import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: `${SITE_NAME} — Outdoor cinema worldwide`,
@@ -36,8 +37,26 @@ export default async function HomePage() {
     .filter((s) => isUpcoming(s.date))
     .sort(sortScreeningsByDate);
 
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    description:
+      "Every outdoor movie. Every city. All summer. Parks, rooftops, and waterfronts.",
+  };
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/placeholder-poster.svg`,
+  };
+
   return (
     <main className="flex-1">
+      <JsonLd data={websiteJsonLd} />
+      <JsonLd data={orgJsonLd} />
       <section className="relative overflow-hidden border-b border-white/10">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(245,166,35,0.18),transparent)]"
