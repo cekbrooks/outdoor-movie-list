@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: `Cities — ${SITE_NAME}`,
   description:
     "Cities on Outdoor Movie List, sorted by screenings, recency, or A–Z. Launch cities: New York and London.",
+  alternates: { canonical: "/cities" },
   openGraph: {
     title: `Cities — ${SITE_NAME}`,
     description: "Explore cities with outdoor movie listings.",

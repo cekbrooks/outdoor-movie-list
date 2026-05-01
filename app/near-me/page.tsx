@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: `Near Me — Outdoor movies within 40 km — ${SITE_NAME}`,
   description:
     "Use your location to see outdoor movie screenings within about 25 miles. Fallback city picker if location is off.",
+  alternates: { canonical: "/near-me" },
   openGraph: {
     title: `Near Me — ${SITE_NAME}`,
     description: "Outdoor screenings near you, sorted by distance.",

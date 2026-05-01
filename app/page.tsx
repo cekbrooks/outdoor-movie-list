@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   title: `${SITE_NAME} — Outdoor cinema worldwide`,
   description:
     "Every outdoor movie. Every city. All summer. Map of screenings, curated lists, and weekly email picks.",
+  alternates: { canonical: "/" },
   openGraph: {
     title: `${SITE_NAME} — Outdoor cinema worldwide`,
     description:

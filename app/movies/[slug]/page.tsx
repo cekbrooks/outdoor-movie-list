@@ -23,10 +23,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const first = rows[0];
   if (!meta || !first) return { title: "Film not found" };
   const title = `${meta.film} (${meta.filmYear}) — Outdoor screenings — ${SITE_NAME}`;
-  const description = first.description.slice(0, 160);
+  const cityNames = Array.from(new Set(rows.map((r) => r.cityName).filter(Boolean)));
+  const cityList =
+    cityNames.length === 0
+      ? "outdoor venues"
+      : cityNames.length === 1
+      ? cityNames[0]
+      : cityNames.length === 2
+      ? `${cityNames[0]} and ${cityNames[1]}`
+      : `${cityNames.slice(0, -1).join(", ")}, and ${cityNames[cityNames.length - 1]}`;
+  const screeningWord = rows.length === 1 ? "screening" : "screenings";
+  const fallback = `${rows.length} outdoor ${screeningWord} of ${meta.film} (${meta.filmYear}) in ${cityList}. Find showtimes, venues, and book tickets.`;
+  const description = first.description.trim() || fallback;
   return {
     title,
     description,
+    alternates: { canonical: `/movies/${slug}` },
     openGraph: {
       title,
       description,

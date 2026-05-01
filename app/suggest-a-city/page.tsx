@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: `Suggest a city — ${SITE_NAME}`,
   description:
     "Request Outdoor Movie List in your city. We save your note locally today and will plug in email + webhooks next.",
+  alternates: { canonical: "/suggest-a-city" },
   openGraph: {
     title: `Add your city — ${SITE_NAME}`,
     description: "Help us launch outdoor movie listings where you live.",
