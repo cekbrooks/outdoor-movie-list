@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Playfair_Display } from "next/font/google";
 import { Navigation } from "@/components/Navigation";
+import { PostHogProvider } from "@/components/PostHogProvider";
 import { defaultOgImage, getMetadataBase, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
 
@@ -53,8 +54,10 @@ export default function RootLayout({
       className={`${playfair.variable} ${dmSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#0a0f1e] text-[#f0ede8]">
-        <Navigation />
-        <div className="flex flex-1 flex-col">{children}</div>
+        <PostHogProvider>
+          <Navigation />
+          <div className="flex flex-1 flex-col">{children}</div>
+        </PostHogProvider>
       </body>
     </html>
   );
