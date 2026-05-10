@@ -2,11 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CityBrowse } from "@/components/CityBrowse";
+import { CityFAQ } from "@/components/CityFAQ";
 import { EmailCapture } from "@/components/EmailCapture";
 import { JsonLd } from "@/components/JsonLd";
+import { buildCityFaq } from "@/lib/city-faq";
 import { fetchCityBySlug, fetchScreeningsByCity } from "@/lib/data";
 import { isUpcoming } from "@/lib/dates";
-import { eventsJsonLdArray } from "@/lib/jsonld";
+import {
+  cityItemListJsonLd,
+  eventsJsonLdArray,
+  faqJsonLd,
+} from "@/lib/jsonld";
 import { sortScreeningsByDate } from "@/lib/queries";
 import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { PERIOD_HEADING, TIME_PERIODS } from "@/lib/time-period";
@@ -47,11 +53,17 @@ export default async function CityPage({ params }: Props) {
     .filter((s) => isUpcoming(s.date))
     .sort(sortScreeningsByDate);
 
-  const jsonLd = eventsJsonLdArray(screenings);
+  const cityUrl = `${SITE_URL}/${slug}`;
+  const itemList = cityItemListJsonLd(city.name, cityUrl, screenings);
+  const eventsLd = eventsJsonLdArray(screenings);
+  const faqs = buildCityFaq(city.name, screenings);
+  const faqLd = faqJsonLd(faqs);
 
   return (
     <main className="flex-1">
-      {screenings.length > 0 ? <JsonLd data={jsonLd} /> : null}
+      {screenings.length > 0 ? <JsonLd data={itemList} /> : null}
+      {screenings.length > 0 ? <JsonLd data={eventsLd} /> : null}
+      {faqs.length > 0 ? <JsonLd data={faqLd} /> : null}
       <section className="relative overflow-hidden border-b border-white/10">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_80%_0%,rgba(245,166,35,0.12),transparent)]"
@@ -89,6 +101,8 @@ export default async function CityPage({ params }: Props) {
       <section className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-16">
         <CityBrowse cityName={city.name} screenings={screenings} />
       </section>
+
+      <CityFAQ cityName={city.name} faqs={faqs} />
 
       <section className="border-t border-white/10 bg-[#0d1428]/40 py-12 md:py-16">
         <div className="mx-auto max-w-6xl px-4 md:px-6">
