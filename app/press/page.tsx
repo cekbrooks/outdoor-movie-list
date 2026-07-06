@@ -121,10 +121,10 @@ export default async function PressPage() {
           <p>
             Contact:{" "}
             <a
-              href="mailto:press@outdoormovielist.com"
+              href="mailto:eb@thebeacons.org"
               className="text-[#f5a623] hover:underline"
             >
-              press@outdoormovielist.com
+              eb@thebeacons.org
             </a>
           </p>
         </div>
