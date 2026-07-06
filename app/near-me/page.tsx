@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NearMeClient } from "@/components/NearMeClient";
-import { fetchScreenings } from "@/lib/data";
+import { fetchUpcomingScreenings } from "@/lib/data";
+import { visibleUpcoming } from "@/lib/screening-utils";
 import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
+
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: `Near Me — Outdoor movies within 40 km — ${SITE_NAME}`,
@@ -18,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function NearMePage() {
-  const allScreenings = await fetchScreenings();
+  const allScreenings = visibleUpcoming(await fetchUpcomingScreenings());
 
   return (
     <main className="flex-1">

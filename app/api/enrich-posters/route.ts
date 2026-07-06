@@ -49,4 +49,11 @@ export async function GET(request: Request) {
     } catch { failed.push(s.film); }
   }
 
+  return NextResponse.json({
+    ok: true,
+    processed: toProcess.length,
+    updated: updated.length,
+    skipped: skipped.length,
+    failed: failed.length,
+  });
 }

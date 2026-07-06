@@ -6,8 +6,8 @@ import { NearMeButton } from "@/components/NearMeButton";
 import { ScreeningsMapLoader } from "@/components/ScreeningsMapLoader";
 import { NoScreenings } from "@/components/NoScreenings";
 import { ScreeningCard } from "@/components/ScreeningCard";
-import { fetchCities, fetchScreenings } from "@/lib/data";
-import { isUpcoming } from "@/lib/dates";
+import { fetchCities, fetchUpcomingScreenings } from "@/lib/data";
+import { visibleUpcoming } from "@/lib/screening-utils";
 import { sortScreeningsByDate } from "@/lib/queries";
 import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
 
@@ -30,12 +30,10 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   const [cities, allScreenings] = await Promise.all([
     fetchCities(),
-    fetchScreenings(),
+    fetchUpcomingScreenings(),
   ]);
 
-  const upcoming = allScreenings
-    .filter((s) => isUpcoming(s.date))
-    .sort(sortScreeningsByDate);
+  const upcoming = visibleUpcoming(allScreenings).sort(sortScreeningsByDate);
 
   const websiteJsonLd = {
     "@context": "https://schema.org",
@@ -106,9 +104,7 @@ export default async function HomePage() {
         ) : (
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             {cities.map((c) => {
-              const count = allScreenings.filter(
-                (s) => s.city === c.slug && isUpcoming(s.date)
-              ).length;
+              const count = upcoming.filter((s) => s.city === c.slug).length;
               return (
                 <Link
                   key={c.slug}

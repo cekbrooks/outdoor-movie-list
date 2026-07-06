@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { CitiesGrid } from "@/components/CitiesGrid";
-import { fetchCities, fetchScreenings } from "@/lib/data";
+import { fetchCities, fetchUpcomingScreenings } from "@/lib/data";
+import { visibleUpcoming } from "@/lib/screening-utils";
 import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
+
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: `Cities — ${SITE_NAME}`,
@@ -17,10 +20,11 @@ export const metadata: Metadata = {
 };
 
 export default async function CitiesPage() {
-  const [cities, screenings] = await Promise.all([
+  const [cities, allScreenings] = await Promise.all([
     fetchCities(),
-    fetchScreenings(),
+    fetchUpcomingScreenings(),
   ]);
+  const screenings = visibleUpcoming(allScreenings);
 
   return (
     <main className="flex-1">

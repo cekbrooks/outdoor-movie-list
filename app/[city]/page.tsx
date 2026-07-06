@@ -6,8 +6,8 @@ import { CityFAQ } from "@/components/CityFAQ";
 import { EmailCapture } from "@/components/EmailCapture";
 import { JsonLd } from "@/components/JsonLd";
 import { buildCityFaq } from "@/lib/city-faq";
-import { fetchCityBySlug, fetchScreeningsByCity } from "@/lib/data";
-import { isUpcoming } from "@/lib/dates";
+import { fetchCityBySlug, fetchUpcomingScreenings } from "@/lib/data";
+import { visibleUpcoming } from "@/lib/screening-utils";
 import {
   cityItemListJsonLd,
   eventsJsonLdArray,
@@ -47,11 +47,8 @@ export default async function CityPage({ params }: Props) {
   const city = await fetchCityBySlug(slug);
   if (!city) notFound();
 
-  const now = new Date();
-  const byCity = await fetchScreeningsByCity(slug);
-  const screenings = byCity
-    .filter((s) => isUpcoming(s.date))
-    .sort(sortScreeningsByDate);
+  const byCity = await fetchUpcomingScreenings(slug);
+  const screenings = visibleUpcoming(byCity).sort(sortScreeningsByDate);
 
   const cityUrl = `${SITE_URL}/${slug}`;
   const itemList = cityItemListJsonLd(city.name, cityUrl, screenings);

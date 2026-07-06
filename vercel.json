@@ -6,6 +6,10 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/cron/hygiene",
+      "schedule": "30 3 * * *"
+    },
+    {
       "path": "/api/cron/daily-update",
       "schedule": "0 7 * * *"
     }

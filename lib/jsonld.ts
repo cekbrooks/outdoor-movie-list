@@ -1,5 +1,7 @@
 import type { Faq } from "./city-faq";
 import { priceCurrencyForCity, screeningStartISO } from "./dates";
+import { filmSlug, venueSlug } from "./queries";
+import { SITE_NAME, SITE_URL } from "./seo";
 import type { Screening } from "./types";
 
 function offerPrice(s: Screening): string {
@@ -8,28 +10,64 @@ function offerPrice(s: Screening): string {
   return n || "0";
 }
 
+function countryFor(city: string): string {
+  return city === "london" ? "GB" : "US";
+}
+
+/**
+ * schema.org ScreeningEvent with timezone-correct startDate, Place geo,
+ * organizer, and a free/ticketed Offer (Phase 3.1).
+ */
 export function screeningToEventJsonLd(s: Screening) {
+  const place: Record<string, unknown> = {
+    "@type": "Place",
+    name: s.venue,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: s.address || undefined,
+      addressLocality: s.cityName || undefined,
+      addressCountry: countryFor(s.city),
+    },
+  };
+  if (s.lat && s.lng) {
+    place.geo = {
+      "@type": "GeoCoordinates",
+      latitude: s.lat,
+      longitude: s.lng,
+    };
+  }
+
   return {
     "@context": "https://schema.org",
-    "@type": "Event",
+    "@type": "ScreeningEvent",
     name: `${s.film} at ${s.venue}`,
-    startDate: screeningStartISO(s.date, s.time),
+    startDate: screeningStartISO(s.date, s.time, s.city),
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    eventStatus: "https://schema.org/EventScheduled",
-    location: {
-      "@type": "Place",
-      name: s.venue,
-      address: s.address,
+    eventStatus:
+      s.status === "tbc"
+        ? "https://schema.org/EventScheduled"
+        : "https://schema.org/EventScheduled",
+    location: place,
+    workPresented: {
+      "@type": "Movie",
+      name: s.film,
+      ...(s.filmYear ? { dateCreated: String(s.filmYear) } : {}),
+      ...(s.imageUrl ? { image: s.imageUrl } : {}),
     },
+    organizer: s.hostOrg
+      ? { "@type": "Organization", name: s.hostOrg }
+      : { "@type": "Organization", name: s.venue },
     offers: {
       "@type": "Offer",
       price: offerPrice(s),
       priceCurrency: priceCurrencyForCity(s.city),
-      url: s.bookingUrl,
+      url: s.bookingUrl || `${SITE_URL}/movies/${filmSlug(s.film, s.filmYear)}`,
       availability: "https://schema.org/InStock",
+      validFrom: s.date,
     },
-    image: s.imageUrl,
-    description: s.description,
+    ...(s.imageUrl ? { image: s.imageUrl } : {}),
+    ...(s.description ? { description: s.description } : {}),
+    url: `${SITE_URL}/venues/${venueSlug(s.venue)}`,
   };
 }
 
@@ -82,5 +120,32 @@ export function faqJsonLd(faqs: Faq[]) {
         text: f.answer,
       },
     })),
+  };
+}
+
+/** schema.org BreadcrumbList for nested pages (Phase 3.1). */
+export function breadcrumbJsonLd(
+  crumbs: { name: string; url: string }[]
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((c, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: c.name,
+      item: c.url,
+    })),
+  };
+}
+
+export function websiteJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    description:
+      "Every outdoor movie. Every city. All summer. Parks, rooftops, and waterfronts.",
   };
 }

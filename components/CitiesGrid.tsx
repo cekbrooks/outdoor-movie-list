@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { City } from "@/lib/types";
 import type { Screening } from "@/lib/types";
-import { isUpcoming } from "@/lib/dates";
 
 type SortMode = "screenings" | "recent" | "az";
 
@@ -17,16 +16,14 @@ type Props = {
 
 export function CitiesGrid({ cities, screenings }: Props) {
   const [sort, setSort] = useState<SortMode>("screenings");
-  const now = useMemo(() => new Date(), []);
 
+  // `screenings` is already filtered to visible upcoming rows server-side.
   const rows: Row[] = useMemo(() => {
     return cities.map((c) => ({
       ...c,
-      count: screenings.filter(
-        (s) => s.city === c.slug && isUpcoming(s.date)
-      ).length,
+      count: screenings.filter((s) => s.city === c.slug).length,
     }));
-  }, [cities, screenings, now]);
+  }, [cities, screenings]);
 
   const sorted = useMemo(() => {
     const copy = [...rows];
