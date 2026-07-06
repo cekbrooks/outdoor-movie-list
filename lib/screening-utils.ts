@@ -26,8 +26,9 @@ export const CITY_RADIUS_KM = Number(process.env.CITY_RADIUS_KM || 40);
  * coordinates to check against the radius. Extend as new tours appear.
  */
 const OUT_OF_CITY_VENUES: Record<string, RegExp> = {
+  // Single distinctive tokens so they match prose AND hyphenated URLs.
   london:
-    /alnwick|scone palace|helmingham|salisbury cathedral|leeds castle|blenheim|chatsworth|cardiff|edinburgh|glasgow|harewood|burghley|newstead abbey|tatton park|bolesworth|raby castle|knebworth|hever castle|arundel castle|sandringham|castle howard|beaulieu|longleat|powderham|caldicot|margam|bodelwyddan|lincoln|durham|exeter|plymouth|norwich|sheffield|manchester|liverpool|leeds|bristol(?! street)/i,
+    /alnwick|scone|helmingham|salisbury|blenheim|chatsworth|cardiff|edinburgh|glasgow|harewood|burghley|newstead|tatton|bolesworth|raby|knebworth|hever|arundel|sandringham|beaulieu|longleat|powderham|caldicot|margam|bodelwyddan|durham|exeter|plymouth|norwich|sheffield|manchester|liverpool|caversham|nottingham|stonor|osterley[\s-]?park.*tour|leeds[\s-]castle|castle[\s-]howard/i,
 };
 
 export function isTbcScreening(s: Screening): boolean {
