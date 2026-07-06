@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmailCapture } from "@/components/EmailCapture";
+import { HomeScreenings } from "@/components/HomeScreenings";
 import { JsonLd } from "@/components/JsonLd";
 import { NearMeButton } from "@/components/NearMeButton";
 import { ScreeningsMapLoader } from "@/components/ScreeningsMapLoader";
 import { NoScreenings } from "@/components/NoScreenings";
-import { ScreeningCard } from "@/components/ScreeningCard";
 import { fetchCities, fetchUpcomingScreenings } from "@/lib/data";
 import { visibleUpcoming } from "@/lib/screening-utils";
 import { sortScreeningsByDate } from "@/lib/queries";
@@ -160,18 +160,14 @@ export default async function HomePage() {
         <h2 className="font-display text-2xl font-semibold text-[#f0ede8] md:text-3xl">
           Upcoming screenings
         </h2>
-        <p className="mt-2 text-sm text-white/55">Sorted by date, all cities.</p>
+        <p className="mt-2 text-sm text-white/55">
+          Nearest dates first — pick your city.
+        </p>
         <div className="mt-10">
           {upcoming.length === 0 ? (
             <NoScreenings />
           ) : (
-            <ul className="grid list-none gap-6 p-0">
-              {upcoming.map((s) => (
-                <li key={s.id}>
-                  <ScreeningCard screening={s} showCity />
-                </li>
-              ))}
-            </ul>
+            <HomeScreenings cities={cities} screenings={upcoming} />
           )}
         </div>
       </section>

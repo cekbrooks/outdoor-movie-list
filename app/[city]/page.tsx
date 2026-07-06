@@ -101,6 +101,18 @@ export default async function CityPage({ params }: Props) {
 
       <CityFAQ cityName={city.name} faqs={faqs} />
 
+      <section className="mx-auto max-w-6xl px-4 pb-4 md:px-6">
+        <p className="text-sm text-white/45">
+          Looking for what already played?{" "}
+          <Link
+            href={`/${slug}/archive`}
+            className="text-[#f5a623]/80 hover:underline"
+          >
+            Browse the {city.name} archive →
+          </Link>
+        </p>
+      </section>
+
       <section className="border-t border-white/10 bg-[#0d1428]/40 py-12 md:py-16">
         <div className="mx-auto max-w-6xl px-4 md:px-6">
           <EmailCapture variant="inline" defaultCity={slug} />

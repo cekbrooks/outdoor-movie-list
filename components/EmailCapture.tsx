@@ -13,6 +13,7 @@ export function EmailCapture({ variant = "inline", defaultCity = "" }: Props) {
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "err">(
     "idle"
   );
+  const [errMsg, setErrMsg] = useState("Something went wrong. Try again.");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,7 +24,15 @@ export function EmailCapture({ variant = "inline", defaultCity = "" }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, cityPreference: city || null }),
       });
-      if (!res.ok) throw new Error("bad");
+      if (!res.ok) {
+        try {
+          const data = (await res.json()) as { message?: string };
+          if (data.message) setErrMsg(data.message);
+        } catch {
+          /* keep default message */
+        }
+        throw new Error("bad");
+      }
       setStatus("done");
       setEmail("");
     } catch {
@@ -83,9 +92,7 @@ export function EmailCapture({ variant = "inline", defaultCity = "" }: Props) {
         <p className="mt-3 text-sm text-emerald-400">You are on the list.</p>
       ) : null}
       {status === "err" ? (
-        <p className="mt-3 text-sm text-red-400">
-          Something went wrong. Try again.
-        </p>
+        <p className="mt-3 text-sm text-red-400">{errMsg}</p>
       ) : null}
     </div>
   );
