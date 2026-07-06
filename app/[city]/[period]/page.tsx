@@ -8,7 +8,7 @@ import { fetchCityBySlug, fetchUpcomingScreenings } from "@/lib/data";
 import { breadcrumbJsonLd, eventsJsonLdArray } from "@/lib/jsonld";
 import { sortScreeningsByDate } from "@/lib/queries";
 import { visibleUpcoming } from "@/lib/screening-utils";
-import { defaultOgImage, SITE_URL } from "@/lib/seo";
+import { ogImageUrl, SITE_URL } from "@/lib/seo";
 import type { TimePeriodSlug } from "@/lib/types";
 import {
   type AnyPeriodSlug,
@@ -50,7 +50,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: `${SITE_URL}/${slug}/${periodRaw}`,
-      images: [{ url: defaultOgImage, width: 1200, height: 630, alt: title }],
+      images: [
+        {
+          url: ogImageUrl({
+            title: `${periodHeading(periodRaw)} in ${city.name}`,
+            subtitle: `${list.length} outdoor screening${list.length === 1 ? "" : "s"}`,
+          }),
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
     },
   };
 }

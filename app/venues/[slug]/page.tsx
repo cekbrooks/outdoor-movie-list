@@ -15,7 +15,7 @@ import {
   inCityRadius,
   isTbcScreening,
 } from "@/lib/screening-utils";
-import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
+import { ogImageUrl, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 export const revalidate = 3600;
 
@@ -68,7 +68,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `${SITE_URL}/venues/${slug}`,
       images: [
         {
-          url: v.imageUrl || defaultOgImage,
+          url: ogImageUrl({
+            title: v.venue,
+            subtitle:
+              upcoming.length > 0
+                ? `${upcoming.length} upcoming outdoor screening${upcoming.length === 1 ? "" : "s"}${v.cityName ? ` · ${v.cityName}` : ""}`
+                : `Outdoor cinema${v.cityName ? ` in ${v.cityName}` : ""}`,
+            img: v.imageUrl || undefined,
+          }),
           width: 1200,
           height: 630,
           alt: v.venue,

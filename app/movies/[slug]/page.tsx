@@ -17,7 +17,7 @@ import {
 } from "@/lib/queries";
 import { dedupeScreenings, inCityRadius, isTbcScreening } from "@/lib/screening-utils";
 import { breadcrumbJsonLd, eventsJsonLdArray } from "@/lib/jsonld";
-import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
+import { ogImageUrl, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 export const revalidate = 3600;
 
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const upcoming = rows.filter((s) => isUpcoming(s.date, s.city));
   const showYear = meta.filmYear && String(meta.filmYear) !== first.date.slice(0, 4);
   const yearPart = showYear ? ` (${meta.filmYear})` : "";
-  const title = `${meta.film}${yearPart} — Outdoor screenings — ${SITE_NAME}`;
+  const title = `${meta.film}${yearPart} Outdoor Screenings — Dates & Tickets`;
   const cityNames = Array.from(
     new Set(upcoming.map((r) => r.cityName).filter(Boolean))
   );
@@ -58,6 +58,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const screeningWord = upcoming.length === 1 ? "screening" : "screenings";
   const fallback = `${upcoming.length} outdoor ${screeningWord} of ${meta.film} in ${cityList}. Find showtimes, venues, and book tickets.`;
   const description = first.description.trim() || fallback;
+  const og = ogImageUrl({
+    title: meta.film,
+    subtitle: `${upcoming.length} outdoor ${screeningWord} in ${cityList}`,
+    img: first.imageUrl || undefined,
+    badge: upcoming.some((s) => s.isFree) ? "Free screenings" : undefined,
+  });
   return {
     title,
     description,
@@ -66,14 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: `${SITE_URL}/movies/${slug}`,
-      images: [
-        {
-          url: first.imageUrl || defaultOgImage,
-          width: 1200,
-          height: 630,
-          alt: meta.film,
-        },
-      ],
+      images: [{ url: og, width: 1200, height: 630, alt: meta.film }],
     },
   };
 }

@@ -45,5 +45,22 @@ export function getMetadataBase(): URL {
   return new URL(DEFAULT_SITE);
 }
 
-export const defaultOgImage =
-  "https://images.unsplash.com/photo-1489599849927-2ee91cedd3db?w=1200&h=630&fit=crop";
+/** Branded per-page OG image (Fix Brief 3.4) — served by /api/og. */
+export function ogImageUrl(opts: {
+  title: string;
+  subtitle?: string;
+  img?: string;
+  badge?: string;
+}): string {
+  const params = new URLSearchParams();
+  params.set("title", opts.title);
+  if (opts.subtitle) params.set("subtitle", opts.subtitle);
+  if (opts.img) params.set("img", opts.img);
+  if (opts.badge) params.set("badge", opts.badge);
+  return `${SITE_URL}/api/og?${params.toString()}`;
+}
+
+export const defaultOgImage = ogImageUrl({
+  title: "Every outdoor movie. Every city.",
+  subtitle: "Parks, rooftops, and waterfronts — updated nightly.",
+});

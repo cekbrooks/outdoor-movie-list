@@ -9,12 +9,13 @@ import { buildCityFaq } from "@/lib/city-faq";
 import { fetchCityBySlug, fetchUpcomingScreenings } from "@/lib/data";
 import { visibleUpcoming } from "@/lib/screening-utils";
 import {
+  breadcrumbJsonLd,
   cityItemListJsonLd,
   eventsJsonLdArray,
   faqJsonLd,
 } from "@/lib/jsonld";
 import { sortScreeningsByDate } from "@/lib/queries";
-import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
+import { ogImageUrl, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { PERIOD_HEADING, TIME_PERIODS } from "@/lib/time-period";
 
 export const revalidate = 300;
@@ -25,8 +26,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { city: slug } = await params;
   const city = await fetchCityBySlug(slug);
   if (!city) return { title: "Not found" };
-  const title = `Outdoor Movies in ${city.name} 2026 — ${SITE_NAME}`;
-  const description = `Outdoor cinema in ${city.name}: parks, rooftops, waterfronts, and gardens. Updated listings with booking links.`;
+  const count = visibleUpcoming(await fetchUpcomingScreenings(slug)).length;
+  const year = new Date().getFullYear();
+  const title = `Outdoor Movies in ${city.name} ${year} — ${SITE_NAME}`;
+  const description = `Outdoor cinema in ${city.name}: parks, rooftops, waterfronts, and gardens. ${count} upcoming screenings with booking links, updated nightly.`;
+  const og = ogImageUrl({
+    title: `Outdoor movies in ${city.name}`,
+    subtitle: `${count} outdoor screenings in ${city.name} this summer`,
+  });
   return {
     title,
     description,
@@ -35,9 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: `${SITE_URL}/${slug}`,
-      images: [
-        { url: defaultOgImage, width: 1200, height: 630, alt: title },
-      ],
+      images: [{ url: og, width: 1200, height: 630, alt: title }],
     },
   };
 }
@@ -55,12 +60,17 @@ export default async function CityPage({ params }: Props) {
   const eventsLd = eventsJsonLdArray(screenings);
   const faqs = buildCityFaq(city.name, screenings);
   const faqLd = faqJsonLd(faqs);
+  const crumbs = breadcrumbJsonLd([
+    { name: "Home", url: SITE_URL },
+    { name: city.name, url: cityUrl },
+  ]);
 
   return (
     <main className="flex-1">
       {screenings.length > 0 ? <JsonLd data={itemList} /> : null}
       {screenings.length > 0 ? <JsonLd data={eventsLd} /> : null}
       {faqs.length > 0 ? <JsonLd data={faqLd} /> : null}
+      <JsonLd data={crumbs} />
       <section className="relative overflow-hidden border-b border-white/10">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_80%_0%,rgba(245,166,35,0.12),transparent)]"
