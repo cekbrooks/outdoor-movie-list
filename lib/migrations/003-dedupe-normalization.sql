@@ -210,8 +210,8 @@ declare
 begin
   for pair in
     select a.id as keep_id, b.id as drop_id,
-           format('title sim %.2f (%s ~ %s)',
-                  similarity(canonical_title(a.film), canonical_title(b.film)),
+           format('title sim %s (%s ~ %s)',
+                  round(similarity(canonical_title(a.film), canonical_title(b.film))::numeric, 2),
                   a.film, b.film) as why
     from screenings a
     join screenings b
@@ -220,8 +220,8 @@ begin
      and a.id <> b.id
      and a.archived = false and b.archived = false
      and abs(
-           coalesce(extract(epoch from a.time::time), 72000) -
-           coalesce(extract(epoch from b.time::time), 72000)
+           coalesce(extract(epoch from (substring(a.time from '^\d{1,2}:\d{2}') || ':00')::time), 72000) -
+           coalesce(extract(epoch from (substring(b.time from '^\d{1,2}:\d{2}') || ':00')::time), 72000)
          ) <= 1800
      and (
            -- same canonical event
