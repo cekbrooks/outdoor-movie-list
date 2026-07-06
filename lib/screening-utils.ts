@@ -6,7 +6,7 @@ import {
   minutesBetween,
   normalizeTitle,
   normalizeVenue,
-  titleSimilarity,
+  sameTitle,
   venuesCompatible,
 } from "./normalize";
 import type { Screening } from "./types";
@@ -20,17 +20,34 @@ export const CITY_CENTERS: Record<string, { lat: number; lng: number }> = {
 
 export const CITY_RADIUS_KM = Number(process.env.CITY_RADIUS_KM || 40);
 
+/**
+ * Known far-away venues that sources mislabel as city events (Adventure
+ * Cinema's UK tour is listed as "London"). Used when a row has no
+ * coordinates to check against the radius. Extend as new tours appear.
+ */
+const OUT_OF_CITY_VENUES: Record<string, RegExp> = {
+  london:
+    /alnwick|scone palace|helmingham|salisbury cathedral|leeds castle|blenheim|chatsworth|cardiff|edinburgh|glasgow|harewood|burghley|newstead abbey|tatton park|bolesworth|raby castle|knebworth|hever castle|arundel castle|sandringham|castle howard|beaulieu|longleat|powderham|caldicot|margam|bodelwyddan|lincoln|durham|exeter|plymouth|norwich|sheffield|manchester|liverpool|leeds|bristol(?! street)/i,
+};
+
 export function isTbcScreening(s: Screening): boolean {
   return s.status === "tbc" || isTbcTitle(s.film);
 }
 
-/** True when the screening is genuinely in/near its labeled city.
- * Screenings without coordinates are given the benefit of the doubt. */
+/** True when the screening is genuinely in/near its labeled city. */
 export function inCityRadius(s: Screening): boolean {
   const center = CITY_CENTERS[s.city];
   if (!center) return true;
-  if (!s.lat || !s.lng) return true;
-  return haversineKm(s.lat, s.lng, center.lat, center.lng) <= CITY_RADIUS_KM;
+  if (s.lat && s.lng) {
+    return haversineKm(s.lat, s.lng, center.lat, center.lng) <= CITY_RADIUS_KM;
+  }
+  // No coordinates: fall back to the known out-of-city venue list.
+  const blocklist = OUT_OF_CITY_VENUES[s.city];
+  if (blocklist) {
+    const haystack = `${s.venue} ${s.address} ${s.neighbourhood}`;
+    if (blocklist.test(haystack)) return false;
+  }
+  return true;
 }
 
 /** Rank: how "specific"/trustworthy a row is; higher wins a merge. */
@@ -53,10 +70,7 @@ function sameEvent(a: Screening, b: Screening): boolean {
   const aTbc = isTbcScreening(a);
   const bTbc = isTbcScreening(b);
   if (aTbc || bTbc) return true; // placeholder collapses into the real row
-  const ta = normalizeTitle(a.film);
-  const tb = normalizeTitle(b.film);
-  if (ta === tb) return true;
-  return titleSimilarity(ta, tb) >= 0.75;
+  return sameTitle(normalizeTitle(a.film), normalizeTitle(b.film));
 }
 
 /**

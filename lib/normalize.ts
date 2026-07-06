@@ -41,23 +41,119 @@ export const SERIES_PREFIXES = [
 const MONTHS =
   "january|february|march|april|may|june|july|august|september|october|november|december";
 
-/** True when a "title" is a placeholder, not a real film. */
+const DATE_LIKE = new RegExp(
+  `^(${MONTHS})\\s+\\d{1,2}(\\s+\\d{4})?$|^\\d{1,2}\\s+(${MONTHS})(\\s+\\d{4})?$`,
+  "i"
+);
+
+/**
+ * Venue/series phrases that can make up an ENTIRE "title" when a source
+ * lists the series rather than the film ("Brooklyn Bridge Park Movies With
+ * A View presented by Persol"). Stripped when testing for placeholders.
+ */
+const SERIES_NOISE = [
+  "brooklyn bridge park",
+  "movies with a view",
+  "big screen at the battery",
+  "the battery",
+  "bryant park",
+  "pier 1",
+  "films on the green",
+  "summer movie nights",
+  "movie nights",
+  "movie night",
+  "outdoor cinema",
+  "open air cinema",
+  "syfy",
+];
+
+/** True when a "title" is a placeholder or series name, not a real film. */
 export function isTbcTitle(title: string): boolean {
   const t = title.trim().toLowerCase();
   if (!t) return true;
   if (/^(tbc|tba|tbd)\b/.test(t)) return true;
   if (/^to be (confirmed|announced|decided)/.test(t)) return true;
   if (/^(film |title |screening )?(tbc|tba|announced)/.test(t)) return true;
-  // Date-like leftovers: "July 9", "9 July", "Jul 9 2026"
-  const dateLike = new RegExp(
-    `^(${MONTHS})\\s+\\d{1,2}(\\s+\\d{4})?$|^\\d{1,2}\\s+(${MONTHS})(\\s+\\d{4})?$`,
-    "i"
-  );
-  if (dateLike.test(t)) return true;
+  if (DATE_LIKE.test(t)) return true;
   if (new RegExp(`announced(\\s+(${MONTHS}))?\\s*\\d{4}`, "i").test(t)) {
     return true;
   }
   if (/^various\b|^rolling\b/.test(t)) return true;
+
+  // Series-only titles: normalize, drop "presented by …", series/venue
+  // phrases, and years — if nothing film-like remains, it's a placeholder.
+  let rest = normalizeTitle(title);
+  rest = rest.replace(/\b(presented|sponsored)\s+by\s+\w+( \w+)?/g, " ");
+  for (const phrase of SERIES_NOISE) {
+    rest = rest.replace(new RegExp(phrase.replace(/ /g, "\\s+"), "g"), " ");
+  }
+  rest = rest.replace(/\b(19|20)\d{2}\b/g, " ").replace(/\s+/g, " ").trim();
+  if (!rest || DATE_LIKE.test(rest)) return true;
+  return false;
+}
+
+/**
+ * Marketing fluff vocabulary: extra words that do NOT make two titles
+ * different films ("By George — Documentary World Premiere" ≡ "By George").
+ */
+const FLUFF_WORDS = new Set([
+  "documentary",
+  "world",
+  "premiere",
+  "screening",
+  "anniversary",
+  "edition",
+  "special",
+  "event",
+  "live",
+  "outdoor",
+  "cinema",
+  "movie",
+  "night",
+  "presented",
+  "sponsored",
+  "by",
+  "feat",
+  "featuring",
+  "the",
+  "a",
+  "an",
+  "sing",
+  "along",
+  "quote",
+]);
+
+const SEQUEL_TOKEN = /^(\d+|ii|iii|iv|v|vi|vii|viii|ix|x)$/;
+
+/** "superman 2" → { base: "superman", seq: "2" }; "superman" → seq "". */
+function splitSequel(t: string): { base: string; seq: string } {
+  const words = t.split(" ");
+  const last = words[words.length - 1];
+  if (words.length > 1 && SEQUEL_TOKEN.test(last)) {
+    return { base: words.slice(0, -1).join(" "), seq: last };
+  }
+  return { base: t, seq: "" };
+}
+
+/** Same film? Handles fluff-suffix variants beyond plain similarity. */
+export function sameTitle(normA: string, normB: string): boolean {
+  if (!normA || !normB) return false;
+  if (normA === normB) return true;
+  // Sequel guard: "superman" vs "superman 2" are different films, however
+  // similar the strings are.
+  const sa = splitSequel(normA);
+  const sb = splitSequel(normB);
+  if (sa.seq !== sb.seq && (sa.base === sb.base || titleSimilarity(sa.base, sb.base) >= 0.75)) {
+    return false;
+  }
+  if (titleSimilarity(normA, normB) >= 0.75) return true;
+  const [shorter, longer] =
+    normA.length <= normB.length ? [normA, normB] : [normB, normA];
+  if (shorter.length >= 4 && longer.startsWith(shorter + " ")) {
+    const extra = longer.slice(shorter.length).trim().split(/\s+/);
+    // Extra words must all be fluff (a digit like "2" means a sequel — keep).
+    if (extra.every((w) => FLUFF_WORDS.has(w))) return true;
+  }
   return false;
 }
 
@@ -96,6 +192,17 @@ export function normalizeTitle(raw: string): string {
 
   return TITLE_ALIASES[t] || t;
 }
+
+/**
+ * Series phrase → the venue that series always runs at. Lets us recover the
+ * real venue when a source lists the organizer ("NYC Parks") as the venue
+ * but the listing title names the series (Fix Brief 1.6).
+ */
+export const SERIES_VENUE_MAP: Record<string, string> = {
+  "big screen at the battery": "The Battery",
+  "movies with a view": "Brooklyn Bridge Park",
+  "bryant park movie nights": "Bryant Park",
+};
 
 /** Organizer names that are NOT real venues (umbrella orgs / touring hosts). */
 export const GENERIC_VENUES = [

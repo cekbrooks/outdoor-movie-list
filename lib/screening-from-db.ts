@@ -1,3 +1,4 @@
+import { isGenericVenue, SERIES_VENUE_MAP } from "./normalize";
 import type { Screening } from "./types";
 
 type Row = Record<string, unknown>;
@@ -47,13 +48,34 @@ function status(raw: unknown): "confirmed" | "tbc" {
  * Maps a Supabase `screenings` row to {@link Screening}. Supports both camelCase
  * (matching our TS type) and snake_case column names from Postgres.
  */
+/**
+ * Umbrella-org venues ("NYC Parks") get replaced with the real venue when
+ * the listing title names a series with a fixed home (Fix Brief 1.6). The
+ * organizer moves to hostOrg.
+ */
+function resolveVenue(venue: string, film: string, hostOrg: string) {
+  if (!isGenericVenue(venue)) return { venue, hostOrg };
+  const lower = film.toLowerCase();
+  for (const [phrase, realVenue] of Object.entries(SERIES_VENUE_MAP)) {
+    if (lower.includes(phrase)) {
+      return { venue: realVenue, hostOrg: hostOrg || venue };
+    }
+  }
+  return { venue, hostOrg };
+}
+
 export function screeningFromDb(row: Row): Screening {
+  const resolved = resolveVenue(
+    str(row, ["venue"]),
+    str(row, ["film"]),
+    str(row, ["hostOrg", "host_org"])
+  );
   return {
     id: str(row, ["id"]),
     city: str(row, ["city", "city_slug"]),
     cityName: str(row, ["cityName", "city_name"]),
-    venue: str(row, ["venue"]),
-    hostOrg: str(row, ["hostOrg", "host_org"]),
+    venue: resolved.venue,
+    hostOrg: resolved.hostOrg,
     address: str(row, ["address"]),
     neighbourhood: str(row, ["neighbourhood", "neighborhood"]),
     lat: num(row, ["lat"]),
