@@ -41,10 +41,12 @@ export function inCityRadius(s: Screening): boolean {
   if (s.lat && s.lng) {
     return haversineKm(s.lat, s.lng, center.lat, center.lng) <= CITY_RADIUS_KM;
   }
-  // No coordinates: fall back to the known out-of-city venue list.
+  // No coordinates: fall back to the known out-of-city venue list. Touring
+  // hosts (Adventure Cinema) often hide the real location in the booking
+  // URL, so check those too.
   const blocklist = OUT_OF_CITY_VENUES[s.city];
   if (blocklist) {
-    const haystack = `${s.venue} ${s.address} ${s.neighbourhood}`;
+    const haystack = `${s.venue} ${s.address} ${s.neighbourhood} ${s.film} ${s.bookingUrl} ${s.listingUrl}`;
     if (blocklist.test(haystack)) return false;
   }
   return true;
