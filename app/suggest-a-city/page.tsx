@@ -5,7 +5,7 @@ import { defaultOgImage, SITE_NAME, SITE_URL } from "@/lib/seo";
 export const metadata: Metadata = {
   title: `Suggest a city — ${SITE_NAME}`,
   description:
-    "Request Outdoor Movie List in your city. We save your note locally today and will plug in email + webhooks next.",
+    "Add your city to Outdoor Movie List. We look for outdoor cinema there and open its page as soon as we find listings.",
   alternates: { canonical: "/suggest-a-city" },
   openGraph: {
     title: `Add your city — ${SITE_NAME}`,
@@ -24,8 +24,9 @@ export default function SuggestCityPage() {
             Add your city
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-white/55">
-            Tell us where you want open-air listings next. We store this in your
-            browser for now and ping our automation webhook when you submit.
+            Tell us where you want open-air listings next. We&apos;ll search for
+            outdoor cinema organisers there and open its page as soon as we find
+            them.
           </p>
         </div>
       </section>

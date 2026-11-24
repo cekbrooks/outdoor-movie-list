@@ -34,6 +34,12 @@ export type City = {
   lng: number;
   addedBy?: string;
   addedDate?: string;
+  /** IANA zone, e.g. "Europe/London". Set by the add-a-city sweep. */
+  timezone?: string | null;
+  /** ISO 4217, e.g. "GBP". */
+  currency?: string | null;
+  /** ISO 3166-1 alpha-2, e.g. "GB". */
+  country_code?: string | null;
 };
 
 export type TimePeriodSlug =

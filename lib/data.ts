@@ -1,5 +1,7 @@
 import { cache } from "react";
-import { earliestToday, todayInCity } from "@/lib/dates";
+import { earliestToday, registerCityZones, todayInCity } from "@/lib/dates";
+import { CITY_COUNTRY_CODES } from "@/lib/jsonld";
+import { registerCityCenters } from "@/lib/screening-utils";
 import { screeningFromDb } from "@/lib/screening-from-db";
 import { supabase } from "@/lib/supabase";
 import type { City, Screening } from "@/lib/types";
@@ -22,6 +24,7 @@ export const fetchScreenings = cache(async (city?: string): Promise<Screening[]>
  */
 export const fetchUpcomingScreenings = cache(
   async (city?: string): Promise<Screening[]> => {
+    await ensureCityRegistry();
     const floor = city ? todayInCity(city) : earliestToday();
     let query = supabase
       .from("screenings")
@@ -37,6 +40,7 @@ export const fetchUpcomingScreenings = cache(
 /** Past screenings for a city (archive pages), newest first. */
 export const fetchPastScreeningsByCity = cache(
   async (city: string, limit = 500): Promise<Screening[]> => {
+    await ensureCityRegistry();
     const { data } = await supabase
       .from("screenings")
       .select("*")
@@ -50,12 +54,34 @@ export const fetchPastScreeningsByCity = cache(
 
 export const fetchCities = cache(async (): Promise<City[]> => {
   const { data } = await supabase.from("cities").select("*").order("name", { ascending: true });
-  return (data || []) as City[];
+  const cities = (data || []) as City[];
+  registerCities(cities);
+  return cities;
+});
+
+/**
+ * Cities added by the add-a-city sweep carry their own time zone, currency,
+ * country and centre on the row. Register them so the date, radius and
+ * JSON-LD helpers (which are keyed by slug) know about them.
+ */
+function registerCities(cities: City[]): void {
+  registerCityZones(cities);
+  registerCityCenters(cities);
+  for (const c of cities) {
+    if (c.country_code) CITY_COUNTRY_CODES[c.slug] = c.country_code.toUpperCase();
+  }
+}
+
+/** Load the city list once per request before any date maths. */
+const ensureCityRegistry = cache(async (): Promise<void> => {
+  await fetchCities();
 });
 
 export const fetchCityBySlug = cache(async (slug: string): Promise<City | null> => {
   const { data } = await supabase.from("cities").select("*").eq("slug", slug).single();
-  return (data || null) as City | null;
+  const city = (data || null) as City | null;
+  if (city) registerCities([city]);
+  return city;
 });
 
 export const fetchScreeningsByCity = cache(async (city: string): Promise<Screening[]> => {
