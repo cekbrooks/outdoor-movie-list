@@ -6,6 +6,9 @@
 -- hard-coded for New York and London; they now live on the row, with the
 -- old hard-coded values kept as a fallback in lib/dates.ts.
 --
+-- Optional: the sweep and the site both work before this runs. Until it
+-- does, swept cities fall back to UTC and USD.
+--
 -- Idempotent: safe to re-run.
 
 alter table cities add column if not exists timezone text;
@@ -17,8 +20,3 @@ where slug = 'new-york' and timezone is null;
 
 update cities set timezone = 'Europe/London', currency = 'GBP', country_code = 'GB'
 where slug = 'london' and timezone is null;
-
--- Tracks where each request got to: pending, sweeping, live, no_sources,
--- duplicate, not_a_city, capped.
-alter table city_suggestions add column if not exists city_slug text;
-alter table city_suggestions add column if not exists swept_at timestamptz;

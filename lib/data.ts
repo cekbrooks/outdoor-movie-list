@@ -6,15 +6,31 @@ import { screeningFromDb } from "@/lib/screening-from-db";
 import { supabase } from "@/lib/supabase";
 import type { City, Screening } from "@/lib/types";
 
+/** Display names by slug, filled from the cities table. */
+const CITY_NAMES: Record<string, string> = {};
+
+/**
+ * Map a DB row, fixing city_name for swept cities: the nightly scraper only
+ * knows "New York" and "London" and writes the slug (e.g. "glasgow") for
+ * any other city.
+ */
+function fromDb(row: Record<string, unknown>): Screening {
+  const s = screeningFromDb(row);
+  const name = CITY_NAMES[s.city];
+  if (name && (!s.cityName || s.cityName === s.city)) s.cityName = name;
+  return s;
+}
+
 /**
  * ALL screenings, past included. Only for archive pages, sitemaps, and
  * diagnostics — upcoming lists must use {@link fetchUpcomingScreenings}.
  */
 export const fetchScreenings = cache(async (city?: string): Promise<Screening[]> => {
+  await ensureCityRegistry();
   let query = supabase.from("screenings").select("*").order("date", { ascending: true });
   if (city) query = query.eq("city", city);
   const { data } = await query;
-  return (data || []).map((row) => screeningFromDb(row as Record<string, unknown>));
+  return (data || []).map((row) => fromDb(row as Record<string, unknown>));
 });
 
 /**
@@ -33,7 +49,7 @@ export const fetchUpcomingScreenings = cache(
       .order("date", { ascending: true });
     if (city) query = query.eq("city", city);
     const { data } = await query;
-    return (data || []).map((row) => screeningFromDb(row as Record<string, unknown>));
+    return (data || []).map((row) => fromDb(row as Record<string, unknown>));
   }
 );
 
@@ -48,7 +64,7 @@ export const fetchPastScreeningsByCity = cache(
       .lt("date", todayInCity(city))
       .order("date", { ascending: false })
       .limit(limit);
-    return (data || []).map((row) => screeningFromDb(row as Record<string, unknown>));
+    return (data || []).map((row) => fromDb(row as Record<string, unknown>));
   }
 );
 
@@ -68,6 +84,7 @@ function registerCities(cities: City[]): void {
   registerCityZones(cities);
   registerCityCenters(cities);
   for (const c of cities) {
+    CITY_NAMES[c.slug] = c.name;
     if (c.country_code) CITY_COUNTRY_CODES[c.slug] = c.country_code.toUpperCase();
   }
 }
@@ -85,8 +102,9 @@ export const fetchCityBySlug = cache(async (slug: string): Promise<City | null> 
 });
 
 export const fetchScreeningsByCity = cache(async (city: string): Promise<Screening[]> => {
+  await ensureCityRegistry();
   const { data } = await supabase.from("screenings").select("*").eq("city", city).order("date", { ascending: true });
-  return (data || []).map((row) => screeningFromDb(row as Record<string, unknown>));
+  return (data || []).map((row) => fromDb(row as Record<string, unknown>));
 });
 
 /**

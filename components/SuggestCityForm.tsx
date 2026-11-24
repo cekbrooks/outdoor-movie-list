@@ -92,7 +92,7 @@ export function SuggestCityForm() {
           now.
         </p>
         <p className="text-white/60">
-          If we find organisers there, its page goes live in about ten minutes.
+          If we find organisers there, its page goes live within the hour.
           Out of season it may start with no dates yet, and fills up as
           screenings are announced.
         </p>

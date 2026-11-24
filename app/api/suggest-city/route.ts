@@ -1,14 +1,12 @@
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
 /**
- * Saves a city request, then hands it to the n8n "OML City Sweep" workflow,
- * which finds outdoor cinema organisers for the city, adds them as sources,
- * creates the city page and runs the first scrape.
- *
- * The sweep is only called when both CITY_SUGGESTION_WEBHOOK_URL and
- * CITY_SWEEP_SECRET are set. The webhook call runs in after(), so it is not
- * cut off when the response is sent (a fire-and-forget fetch can be).
+ * Saves a city request as a "pending" row in city_suggestions. The n8n
+ * "OML City Sweep" workflow polls for pending rows every 30 minutes, finds
+ * outdoor cinema organisers for the city, adds them as sources, creates the
+ * city page and runs the first scrape. No secret or webhook URL is needed on
+ * the site side.
  */
 export async function POST(req: Request) {
   try {
@@ -37,28 +35,6 @@ export async function POST(req: Request) {
     if (error) {
       console.error("[api/suggest-city] Supabase error:", error);
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-    }
-
-    const webhookUrl = process.env.CITY_SUGGESTION_WEBHOOK_URL;
-    const secret = process.env.CITY_SWEEP_SECRET;
-    if (webhookUrl && secret) {
-      after(async () => {
-        try {
-          await fetch(webhookUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-oml-sweep-secret": secret,
-            },
-            // Only the city goes to n8n; the requester's name and email stay
-            // in the city_suggestions table.
-            body: JSON.stringify({ cityName }),
-            signal: AbortSignal.timeout(10_000),
-          });
-        } catch (e) {
-          console.error("[api/suggest-city] sweep webhook failed:", e);
-        }
-      });
     }
 
     return NextResponse.json({ ok: true });
