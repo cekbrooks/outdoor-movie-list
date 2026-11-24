@@ -4,17 +4,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { ScreeningCard } from "@/components/ScreeningCard";
+import { EmailCapture } from "@/components/EmailCapture";
 import { ScreeningsMapLoader } from "@/components/ScreeningsMapLoader";
-import { fetchScreenings } from "@/lib/data";
+import { fetchScreenings, fetchUpcomingScreenings } from "@/lib/data";
 import { isUpcoming, todayInCity } from "@/lib/dates";
 import { breadcrumbJsonLd, eventsJsonLdArray } from "@/lib/jsonld";
 import { normalizeVenue } from "@/lib/normalize";
-import { getScreeningsByVenueSlug, sortScreeningsByDate } from "@/lib/queries";
+import {
+  filmSlug,
+  getScreeningsByVenueSlug,
+  sortScreeningsByDate,
+} from "@/lib/queries";
 import {
   dedupeScreenings,
   inCityRadius,
   isTbcScreening,
+  visibleUpcoming,
 } from "@/lib/screening-utils";
+import { longDateLabel, seasonSummary } from "@/lib/season";
 import { ogImageUrl, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 export const revalidate = 3600;
@@ -53,7 +60,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { upcoming, past, any: v } = await venueRows(slug);
   if (!v) return { title: "Venue not found" };
   const year = todayInCity(v.city).slice(0, 4);
-  const title = `${v.venue} Outdoor Movies ${year} — Full Schedule — ${SITE_NAME}`;
+  const lastYear = past[0]?.date.slice(0, 4);
+  const title =
+    upcoming.length > 0 || !lastYear
+      ? `${v.venue} Outdoor Movies ${year} — Full Schedule — ${SITE_NAME}`
+      : `${v.venue} Outdoor Movies — ${lastYear} Films & Next Season — ${SITE_NAME}`;
   const description =
     upcoming.length > 0
       ? `${v.venue} outdoor movie schedule: ${upcoming.length} upcoming screening${upcoming.length === 1 ? "" : "s"}${v.neighbourhood ? ` in ${v.neighbourhood}` : ""}. Dates, films, and booking links, updated nightly.`
@@ -92,6 +103,17 @@ export default async function VenuePage({ params }: Props) {
 
   const year = todayInCity(v.city).slice(0, 4);
   const jsonLd = eventsJsonLdArray(upcoming);
+
+  // Nothing announced here yet: summarise last season and point to what's
+  // on elsewhere in the city, so a visitor never lands on a dead end.
+  const lastSeason = upcoming.length === 0 ? seasonSummary(past) : null;
+  const elsewhere =
+    upcoming.length === 0
+      ? visibleUpcoming(await fetchUpcomingScreenings(v.city))
+          .filter((s) => s.venue !== v.venue)
+          .sort(sortScreeningsByDate)
+          .slice(0, 6)
+      : [];
   const crumbs = breadcrumbJsonLd([
     { name: "Home", url: SITE_URL },
     ...(v.cityName
@@ -120,14 +142,28 @@ export default async function VenuePage({ params }: Props) {
           <div className="mt-6 grid gap-8 md:grid-cols-[minmax(0,1fr)_280px] md:items-start">
             <div>
               <h1 className="font-display text-3xl font-semibold text-[#f0ede8] md:text-4xl">
-                {v.venue} outdoor movies {year} — full schedule
+                {upcoming.length > 0 || past.length === 0
+                  ? `${v.venue} outdoor movies ${year}: full schedule`
+                  : `${v.venue} outdoor movies: past films and next season`}
               </h1>
               <p className="mt-2 text-sm text-[#f5a623]/90">{v.hostOrg}</p>
               <p className="mt-4 max-w-2xl text-white/65">
                 {upcoming.length > 0
                   ? `${upcoming.length} upcoming screening${upcoming.length === 1 ? "" : "s"} at ${v.venue}${v.neighbourhood ? ` in ${v.neighbourhood}` : ""}${freeCount > 0 ? `, ${freeCount === upcoming.length ? "all free" : `${freeCount} free`}` : ""}. ${freeCount > 0 ? "Free nights are first-come, first-served — arrive 60–90 minutes early for a good spot, and bring a blanket or low chairs. " : ""}Check each listing for food rules, accessibility, and booking links.`
-                  : `No upcoming screenings announced at ${v.venue} right now — new dates appear here as soon as they're published.`}
+                  : `No upcoming screenings announced at ${v.venue} right now. New dates appear here as soon as they're published.`}
               </p>
+              {lastSeason ? (
+                <p className="mt-4 max-w-2xl text-white/55">
+                  Last season {v.venue} showed {lastSeason.lastYearCount} outdoor
+                  film{lastSeason.lastYearCount === 1 ? "" : "s"} in{" "}
+                  {lastSeason.lastYear}
+                  {lastSeason.firstMonth && lastSeason.lastMonth
+                    ? `, between ${lastSeason.firstMonth} and ${lastSeason.lastMonth}`
+                    : ""}
+                  . The most recent was {past[0].film} on{" "}
+                  {longDateLabel(past[0].date)}.
+                </p>
+              ) : null}
               <p className="mt-4 text-sm text-white/50">{v.address}</p>
               {v.bookingUrl ? (
                 <a
@@ -217,6 +253,37 @@ export default async function VenuePage({ params }: Props) {
         </section>
       ) : null}
 
+      {upcoming.length === 0 && elsewhere.length > 0 ? (
+        <section className="mx-auto max-w-6xl px-4 py-10 md:px-6">
+          <h2 className="font-display text-xl font-semibold text-[#f0ede8]">
+            Coming up elsewhere in {v.cityName}
+          </h2>
+          <ul className="mt-8 grid list-none gap-6 p-0">
+            {elsewhere.map((s) => (
+              <li key={s.id}>
+                <ScreeningCard screening={s} showCity={false} />
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 text-sm">
+            <Link href={`/${v.city}`} className="text-[#f5a623] hover:underline">
+              All outdoor movies in {v.cityName} →
+            </Link>
+          </p>
+        </section>
+      ) : null}
+
+      {upcoming.length === 0 && elsewhere.length === 0 ? (
+        <section className="mx-auto max-w-6xl px-4 py-10 md:px-6">
+          <h2 className="font-display text-xl font-semibold text-[#f0ede8]">
+            Hear when {v.venue} announces dates
+          </h2>
+          <div className="mt-6">
+            <EmailCapture variant="inline" defaultCity={v.city} />
+          </div>
+        </section>
+      ) : null}
+
       {past.length > 0 ? (
         <section className="mx-auto max-w-6xl px-4 py-10 md:px-6 md:pb-20">
           <h2 className="font-display text-xl font-semibold text-white/60">
@@ -225,7 +292,17 @@ export default async function VenuePage({ params }: Props) {
           <ul className="mt-6 list-none space-y-2 p-0 text-sm text-white/45">
             {past.slice(0, 30).map((s) => (
               <li key={s.id}>
-                {fmtDate(s.date)} — {s.film}
+                {fmtDate(s.date)} {s.date.slice(0, 4)} —{" "}
+                {s.filmYear ? (
+                  <Link
+                    href={`/movies/${filmSlug(s.film, s.filmYear)}`}
+                    className="hover:text-[#f5a623] hover:underline"
+                  >
+                    {s.film}
+                  </Link>
+                ) : (
+                  s.film
+                )}
               </li>
             ))}
           </ul>
