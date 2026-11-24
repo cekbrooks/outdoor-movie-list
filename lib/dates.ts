@@ -15,6 +15,32 @@ export const CITY_TIMEZONES: Record<string, string> = {
   london: "Europe/London",
 };
 
+/** Currency per city slug. Launch cities are hard-coded; swept cities are
+ * registered from the cities table by registerCities() in lib/data.ts. */
+export const CITY_CURRENCIES: Record<string, string> = {
+  "new-york": "USD",
+  london: "GBP",
+};
+
+function isValidTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Add cities from the database to the timezone and currency maps. */
+export function registerCityZones(
+  rows: { slug: string; timezone?: string | null; currency?: string | null }[]
+): void {
+  for (const r of rows) {
+    if (r.timezone && isValidTimeZone(r.timezone)) CITY_TIMEZONES[r.slug] = r.timezone;
+    if (r.currency) CITY_CURRENCIES[r.slug] = r.currency;
+  }
+}
+
 export function cityTimeZone(city?: string): string {
   return (city && CITY_TIMEZONES[city]) || "UTC";
 }
@@ -111,7 +137,7 @@ export function formatRangeShortISO(fromISO: string, toISO: string): string {
 }
 
 export function priceCurrencyForCity(city: string): string {
-  return city === "london" ? "GBP" : "USD";
+  return CITY_CURRENCIES[city] || "USD";
 }
 
 /** UTC offset (e.g. "-04:00") for the city's timezone on the given date. */

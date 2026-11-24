@@ -10,8 +10,14 @@ function offerPrice(s: Screening): string {
   return n || "0";
 }
 
+/** ISO country code per city slug; swept cities register theirs. */
+export const CITY_COUNTRY_CODES: Record<string, string> = {
+  "new-york": "US",
+  london: "GB",
+};
+
 function countryFor(city: string): string {
-  return city === "london" ? "GB" : "US";
+  return CITY_COUNTRY_CODES[city] || "US";
 }
 
 /**

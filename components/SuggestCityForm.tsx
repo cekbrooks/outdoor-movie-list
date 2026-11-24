@@ -28,6 +28,15 @@ function writeStored(rows: Stored[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
 }
 
+function citySlug(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export function SuggestCityForm() {
   const [cityName, setCityName] = useState("");
   const [name, setName] = useState("");
@@ -72,21 +81,37 @@ export function SuggestCityForm() {
   }
 
   if (phase === "done") {
+    const slug = citySlug(cityName);
     return (
       <div className="space-y-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6 md:p-8">
         <p className="text-lg text-[#f0ede8] md:text-xl">
-          You&apos;ll be the first person to bring Outdoor Movie List to{" "}
+          Thanks. We&apos;re looking for outdoor cinema in{" "}
           <span className="font-semibold text-[#f5a623]">
             {cityName.trim()}
-          </span>
-          . We&apos;ll email you when it&apos;s live.
+          </span>{" "}
+          now.
         </p>
-        <Link
-          href="/"
-          className="inline-block text-sm font-medium text-[#f5a623] underline-offset-4 hover:underline"
-        >
-          Back to home
-        </Link>
+        <p className="text-white/60">
+          If we find organisers there, its page goes live within the hour.
+          Out of season it may start with no dates yet, and fills up as
+          screenings are announced.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          {slug ? (
+            <Link
+              href={`/${slug}`}
+              className="inline-block text-sm font-medium text-[#f5a623] underline-offset-4 hover:underline"
+            >
+              Check its page
+            </Link>
+          ) : null}
+          <Link
+            href="/cities"
+            className="inline-block text-sm font-medium text-[#f5a623] underline-offset-4 hover:underline"
+          >
+            See all cities
+          </Link>
+        </div>
       </div>
     );
   }

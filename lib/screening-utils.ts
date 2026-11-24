@@ -18,6 +18,15 @@ export const CITY_CENTERS: Record<string, { lat: number; lng: number }> = {
   london: { lat: 51.5074, lng: -0.1278 },
 };
 
+/** Add swept cities' centres from the cities table (see lib/data.ts). */
+export function registerCityCenters(rows: { slug: string; lat: number; lng: number }[]): void {
+  for (const r of rows) {
+    if (!CITY_CENTERS[r.slug] && Number.isFinite(r.lat) && Number.isFinite(r.lng)) {
+      CITY_CENTERS[r.slug] = { lat: r.lat, lng: r.lng };
+    }
+  }
+}
+
 export const CITY_RADIUS_KM = Number(process.env.CITY_RADIUS_KM || 40);
 
 /**
