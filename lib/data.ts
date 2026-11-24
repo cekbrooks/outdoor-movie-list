@@ -22,15 +22,47 @@ function fromDb(row: Record<string, unknown>): Screening {
 }
 
 /**
+ * PostgREST returns at most 1,000 rows per request, so a plain select silently
+ * drops rows once the table grows (film and venue pages for the newest
+ * listings would 404). Page through with .range() until a short page.
+ */
+const PAGE_SIZE = 1000;
+const MAX_ROWS = 50_000;
+
+type RangeQuery = {
+  range: (
+    from: number,
+    to: number
+  ) => PromiseLike<{ data: unknown[] | null; error: unknown }>;
+};
+
+async function selectAll(build: () => RangeQuery): Promise<Record<string, unknown>[]> {
+  const out: Record<string, unknown>[] = [];
+  for (let from = 0; from < MAX_ROWS; from += PAGE_SIZE) {
+    const { data, error } = await build().range(from, from + PAGE_SIZE - 1);
+    if (error || !data) break;
+    out.push(...(data as Record<string, unknown>[]));
+    if (data.length < PAGE_SIZE) break;
+  }
+  return out;
+}
+
+/**
  * ALL screenings, past included. Only for archive pages, sitemaps, and
  * diagnostics — upcoming lists must use {@link fetchUpcomingScreenings}.
  */
 export const fetchScreenings = cache(async (city?: string): Promise<Screening[]> => {
   await ensureCityRegistry();
-  let query = supabase.from("screenings").select("*").order("date", { ascending: true });
-  if (city) query = query.eq("city", city);
-  const { data } = await query;
-  return (data || []).map((row) => fromDb(row as Record<string, unknown>));
+  const rows = await selectAll(() => {
+    let query = supabase
+      .from("screenings")
+      .select("*")
+      .order("date", { ascending: true })
+      .order("id", { ascending: true });
+    if (city) query = query.eq("city", city);
+    return query;
+  });
+  return rows.map(fromDb);
 });
 
 /**
@@ -42,14 +74,17 @@ export const fetchUpcomingScreenings = cache(
   async (city?: string): Promise<Screening[]> => {
     await ensureCityRegistry();
     const floor = city ? todayInCity(city) : earliestToday();
-    let query = supabase
-      .from("screenings")
-      .select("*")
-      .gte("date", floor)
-      .order("date", { ascending: true });
-    if (city) query = query.eq("city", city);
-    const { data } = await query;
-    return (data || []).map((row) => fromDb(row as Record<string, unknown>));
+    const rows = await selectAll(() => {
+      let query = supabase
+        .from("screenings")
+        .select("*")
+        .gte("date", floor)
+        .order("date", { ascending: true })
+        .order("id", { ascending: true });
+      if (city) query = query.eq("city", city);
+      return query;
+    });
+    return rows.map(fromDb);
   }
 );
 
@@ -103,8 +138,15 @@ export const fetchCityBySlug = cache(async (slug: string): Promise<City | null> 
 
 export const fetchScreeningsByCity = cache(async (city: string): Promise<Screening[]> => {
   await ensureCityRegistry();
-  const { data } = await supabase.from("screenings").select("*").eq("city", city).order("date", { ascending: true });
-  return (data || []).map((row) => fromDb(row as Record<string, unknown>));
+  const rows = await selectAll(() =>
+    supabase
+      .from("screenings")
+      .select("*")
+      .eq("city", city)
+      .order("date", { ascending: true })
+      .order("id", { ascending: true })
+  );
+  return rows.map(fromDb);
 });
 
 /**

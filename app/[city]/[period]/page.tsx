@@ -45,6 +45,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    // An empty "tonight" or "this weekend" page is thin; keep it out of the
+    // index until it has listings (it stays reachable and linkable).
+    ...(list.length === 0 ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical: `/${slug}/${periodRaw}` },
     openGraph: {
       title,

@@ -6,6 +6,7 @@ import {
   fetchAllScreeningsForCrawlers,
   fetchCitiesForCrawlers,
 } from "@/lib/seo-data";
+import { MIN_LISTINGS_TO_INDEX } from "@/lib/season";
 import { MONTH_PERIODS, monthTargetYear } from "@/lib/time-period";
 import type { Screening } from "@/lib/types";
 
@@ -107,6 +108,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const cityUpcoming = upcoming.filter((s) => s.city === city.slug);
     const cityPast = past.filter((s) => s.city === city.slug);
     const cityChanged = lastChanged(rowsFor([...cityUpcoming, ...cityPast]), now);
+
+    // Matches the city page's noindex rule for near-empty cities.
+    if (cityUpcoming.length + cityPast.length < MIN_LISTINGS_TO_INDEX) continue;
 
     add(`/${city.slug}`, "daily", 0.9, cityChanged);
 
