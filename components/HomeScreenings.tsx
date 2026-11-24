@@ -30,14 +30,30 @@ function guessCity(cities: City[]): string | null {
   return null;
 }
 
+/** City with the most upcoming screenings, else the first city. */
+function defaultCity(cities: City[], screenings: Screening[]): string | null {
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const c of cities) {
+    const n = screenings.filter((s) => s.city === c.slug).length;
+    if (n > bestCount) {
+      best = c.slug;
+      bestCount = n;
+    }
+  }
+  return best || cities[0]?.slug || null;
+}
+
 /**
  * Homepage screening list (Fix Brief 2.1): leads with "This week in {city}"
  * for the visitor's detected/remembered city instead of dumping 100+ mixed-
  * city rows. Selection persists in localStorage.
  */
 export function HomeScreenings({ cities, screenings }: Props) {
-  const [city, setCity] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
+  // Server-render a real list (the busiest city) so search engines and AI
+  // agents that don't run JavaScript still see screenings; the visitor's
+  // remembered or detected city replaces it after hydration.
+  const [city, setCity] = useState<string | null>(() => defaultCity(cities, screenings));
 
   useEffect(() => {
     let initial: string | null = null;
@@ -49,8 +65,7 @@ export function HomeScreenings({ cities, screenings }: Props) {
     if (!initial || !cities.some((c) => c.slug === initial)) {
       initial = guessCity(cities) || cities[0]?.slug || null;
     }
-    setCity(initial);
-    setReady(true);
+    if (initial) setCity(initial);
   }, [cities]);
 
   function choose(slug: string) {
@@ -74,15 +89,6 @@ export function HomeScreenings({ cities, screenings }: Props) {
       later: mine.filter((s) => s.date > cutoffISO),
     };
   }, [screenings, city]);
-
-  if (!ready) {
-    // Render nothing city-specific during hydration to avoid a flash.
-    return (
-      <div className="rounded-2xl border border-white/10 bg-[#0d1428]/50 p-12 text-center text-white/50">
-        Loading screenings…
-      </div>
-    );
-  }
 
   return (
     <div>
